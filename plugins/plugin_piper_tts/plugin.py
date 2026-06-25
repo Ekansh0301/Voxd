@@ -35,15 +35,17 @@ except ImportError:
             self.name = ""
             self.description = ""
             self.options = {}
-        def add_option(self, *args, **kwargs): pass
+
+        def add_option(self, *args, **kwargs):
+            pass
 
     class Event:
-        AUDIO_OUTPUT = 'audio_output'
+        AUDIO_OUTPUT = "audio_output"
 
 
 PLUGIN_ID = "plugin_piper_tts"
-DEFAULT_VOICES_DIR = str(Path.home() / 'flash-copilot' / 'voices')
-DEFAULT_VOICE = 'en_US-ryan-high'
+DEFAULT_VOICES_DIR = str(Path.home() / "flash-copilot" / "voices")
+DEFAULT_VOICE = "en_US-ryan-high"
 
 
 class Plugin(BasePlugin):
@@ -54,8 +56,7 @@ class Plugin(BasePlugin):
         self.id = PLUGIN_ID
         self.name = "Local Piper TTS"
         self.description = (
-            "Replaces cloud TTS with local Piper neural TTS. "
-            "Fast, private, no API key needed."
+            "Replaces cloud TTS with local Piper neural TTS. " "Fast, private, no API key needed."
         )
         self.order = 100
         self._tts_lock = threading.Lock()
@@ -109,11 +110,7 @@ class Plugin(BasePlugin):
             if self.get_option_value("enabled"):
                 text = event.data.get("text", "")
                 if text:
-                    threading.Thread(
-                        target=self._speak,
-                        args=(text,),
-                        daemon=True
-                    ).start()
+                    threading.Thread(target=self._speak, args=(text,), daemon=True).start()
                     # Signal that we handled audio output
                     event.stop = True
 
@@ -139,7 +136,7 @@ class Plugin(BasePlugin):
 
     def _piper_speak(self, text: str, model_path: str, speed: float):
         """Run Piper and play the audio."""
-        tmp = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
+        tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         tmp.close()
         tmp_path = tmp.name
 
@@ -147,26 +144,32 @@ class Plugin(BasePlugin):
             # Try Python module first
             proc = subprocess.run(
                 [
-                    'python3', '-m', 'piper',
-                    '--model', model_path,
-                    '--output_file', tmp_path,
-                    '--length_scale', str(round(1.0 / speed, 2)),
-                    '--noise_scale', '0.667',
-                    '--noise_w', '0.8',
+                    "python3",
+                    "-m",
+                    "piper",
+                    "--model",
+                    model_path,
+                    "--output_file",
+                    tmp_path,
+                    "--length_scale",
+                    str(round(1.0 / speed, 2)),
+                    "--noise_scale",
+                    "0.667",
+                    "--noise_w",
+                    "0.8",
                 ],
-                input=text.encode('utf-8'),
+                input=text.encode("utf-8"),
                 capture_output=True,
-                timeout=30
+                timeout=30,
             )
 
             if proc.returncode != 0:
                 # Try CLI version
                 proc2 = subprocess.run(
-                    ['piper', '--model', model_path,
-                     '--output_file', tmp_path],
-                    input=text.encode('utf-8'),
+                    ["piper", "--model", model_path, "--output_file", tmp_path],
+                    input=text.encode("utf-8"),
                     capture_output=True,
-                    timeout=30
+                    timeout=30,
                 )
                 if proc2.returncode != 0:
                     print("[PiperTTS] Both piper methods failed")
@@ -187,32 +190,28 @@ class Plugin(BasePlugin):
 
     def _play(self, wav_path: str):
         """Play WAV via aplay (ALSA) or paplay (PulseAudio)."""
-        for player in ['paplay', 'aplay', 'play']:
-            result = subprocess.run(
-                ['which', player],
-                capture_output=True
-            )
+        for player in ["paplay", "aplay", "play"]:
+            result = subprocess.run(["which", player], capture_output=True)
             if result.returncode == 0:
-                subprocess.run([player, wav_path],
-                               capture_output=True, timeout=60)
+                subprocess.run([player, wav_path], capture_output=True, timeout=60)
                 return
         print("[PiperTTS] No audio player found (need aplay, paplay, or play)")
 
     def _clean(self, text: str) -> str:
         """Remove markdown for clean TTS."""
-        text = re.sub(r'```[\s\S]*?```', 'code block', text)
-        text = re.sub(r'`([^`]+)`', r'\1', text)
-        text = re.sub(r'\*{1,3}([^*]+)\*{1,3}', r'\1', text)
-        text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
-        text = re.sub(r'^\s*[-•*]\s+', '', text, flags=re.MULTILINE)
-        text = re.sub(r'https?://\S+', 'link', text)
-        text = re.sub(r'\n+', ' ', text)
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"```[\s\S]*?```", "code block", text)
+        text = re.sub(r"`([^`]+)`", r"\1", text)
+        text = re.sub(r"\*{1,3}([^*]+)\*{1,3}", r"\1", text)
+        text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+        text = re.sub(r"^\s*[-•*]\s+", "", text, flags=re.MULTILINE)
+        text = re.sub(r"https?://\S+", "link", text)
+        text = re.sub(r"\n+", " ", text)
+        text = re.sub(r"\s+", " ", text)
         if len(text) > 600:
-            text = text[:597] + '...'
+            text = text[:597] + "..."
         return text.strip()
 
     def get_option_value(self, key: str):
         """Get option value with fallback to default."""
         opt = self.options.get(key, {})
-        return opt.get('value', opt.get('default', ''))
+        return opt.get("value", opt.get("default", ""))

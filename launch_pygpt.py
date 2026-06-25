@@ -17,20 +17,21 @@ import sys
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent
-PLUGIN_DIR  = PROJECT_DIR / 'plugins'
+PLUGIN_DIR = PROJECT_DIR / "plugins"
 
 # Ensure Flash plugins are on path
 sys.path.insert(0, str(PLUGIN_DIR))
 sys.path.insert(0, str(PROJECT_DIR))
 
 # ── Load our config ───────────────────────────────────────────────────────────
-config_path = PROJECT_DIR / 'config' / 'config.json'
+config_path = PROJECT_DIR / "config" / "config.json"
 with open(config_path) as f:
     flash_config = json.load(f)
 
-model      = flash_config.get('model', 'qwen2.5-coder:3b')
-voice      = flash_config.get('voice', 'en_US-ryan-high')
-voices_dir = str(PROJECT_DIR / flash_config.get('voices_dir', 'voices'))
+model = flash_config.get("model", "qwen2.5-coder:3b")
+voice = flash_config.get("voice", "en_US-ryan-high")
+voices_dir = str(PROJECT_DIR / flash_config.get("voices_dir", "voices"))
+
 
 # ── Patch PyGPT to register our plugins before launch ─────────────────────────
 def patch_and_launch():
@@ -38,8 +39,8 @@ def patch_and_launch():
         from pygpt_net.app import run
 
         # Pre-configure Ollama endpoint
-        os.environ['OPENAI_API_BASE'] = 'http://localhost:11434/v1'
-        os.environ['OPENAI_API_KEY']  = 'ollama'  # Ollama ignores API keys
+        os.environ["OPENAI_API_BASE"] = "http://localhost:11434/v1"
+        os.environ["OPENAI_API_KEY"] = "ollama"  # Ollama ignores API keys
 
         print("\n[Flash] Launching PyGPT with:")
         print(f"  Model:  {model}")
@@ -57,17 +58,19 @@ def patch_and_launch():
     except Exception as e:
         print(f"ERROR launching PyGPT: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
 
 def install_plugins_to_pygpt():
     """Copy Flash plugins to PyGPT's plugin directory."""
-    pygpt_plugin_dir = Path.home() / '.config' / 'pygpt-net' / 'plugins'
+    pygpt_plugin_dir = Path.home() / ".config" / "pygpt-net" / "plugins"
     pygpt_plugin_dir.mkdir(parents=True, exist_ok=True)
 
     import shutil
-    for plugin in ['plugin_piper_tts', 'plugin_flash_avatar']:
+
+    for plugin in ["plugin_piper_tts", "plugin_flash_avatar"]:
         src = PLUGIN_DIR / plugin
         dst = pygpt_plugin_dir / plugin
         if src.exists():
@@ -80,24 +83,24 @@ def install_plugins_to_pygpt():
 
     # Update plugin config to point to our voices
     plugin_config = {
-        'plugin_piper_tts': {
-            'voices_dir': voices_dir,
-            'voice_model': voice,
-            'speed': flash_config.get('tts_speed', 0.95),
-            'enabled': True,
+        "plugin_piper_tts": {
+            "voices_dir": voices_dir,
+            "voice_model": voice,
+            "speed": flash_config.get("tts_speed", 0.95),
+            "enabled": True,
         },
-        'plugin_flash_avatar': {
-            'enabled': flash_config.get('avatar_enabled', True),
-        }
+        "plugin_flash_avatar": {
+            "enabled": flash_config.get("avatar_enabled", True),
+        },
     }
 
-    config_out = pygpt_plugin_dir / 'flash_plugin_config.json'
-    with open(config_out, 'w') as f:
+    config_out = pygpt_plugin_dir / "flash_plugin_config.json"
+    with open(config_out, "w") as f:
         json.dump(plugin_config, f, indent=2)
     print(f"[Flash] Plugin config written: {config_out}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("Installing Flash plugins into PyGPT...")
     install_plugins_to_pygpt()
     print("Launching PyGPT...\n")

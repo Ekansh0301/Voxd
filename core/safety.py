@@ -15,87 +15,87 @@ import threading
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
-log = logging.getLogger('flash.safety')
+log = logging.getLogger("flash.safety")
 
 # ── Patterns: ALWAYS require explicit confirmation ─────────────────────────────
 DESTRUCTIVE_PATTERNS = [
-    r'\brm\s+-[rf]',          # rm -rf
-    r'\brm\b.*[/*]',          # rm with wildcards
-    r'\bdd\b',                # disk dump (extremely dangerous)
-    r'\bmkfs\b',              # format filesystem
-    r'\bfdisk\b',             # partition editor
-    r'\bparted\b',
-    r'\bsudo\s+rm\b',
-    r'\bsudo\s+dd\b',
-    r'\b>\s*/dev/',           # writing to device files
-    r'\bsystemctl\s+stop\b',
-    r'\bsystemctl\s+disable\b',
-    r'\bkillall\b',
-    r'\bpkill\b',
-    r'\bapt[-\s]+(remove|purge|autoremove)\b',
-    r'\bdpkg\s+--purge\b',
-    r'\bchmod\s+777\b',       # making things world-writable
-    r'\bchown\s+root\b',
-    r'curl.*\|\s*(bash|sh)',   # curl pipe to shell
-    r'wget.*\|\s*(bash|sh)',
+    r"\brm\s+-[rf]",  # rm -rf
+    r"\brm\b.*[/*]",  # rm with wildcards
+    r"\bdd\b",  # disk dump (extremely dangerous)
+    r"\bmkfs\b",  # format filesystem
+    r"\bfdisk\b",  # partition editor
+    r"\bparted\b",
+    r"\bsudo\s+rm\b",
+    r"\bsudo\s+dd\b",
+    r"\b>\s*/dev/",  # writing to device files
+    r"\bsystemctl\s+stop\b",
+    r"\bsystemctl\s+disable\b",
+    r"\bkillall\b",
+    r"\bpkill\b",
+    r"\bapt[-\s]+(remove|purge|autoremove)\b",
+    r"\bdpkg\s+--purge\b",
+    r"\bchmod\s+777\b",  # making things world-writable
+    r"\bchown\s+root\b",
+    r"curl.*\|\s*(bash|sh)",  # curl pipe to shell
+    r"wget.*\|\s*(bash|sh)",
 ]
 
 # ── Patterns: require confirmation (lower risk but still modifying) ────────────
 REVIEW_PATTERNS = [
-    r'\bsudo\b',
-    r'\bapt\b',
-    r'\bdpkg\b',
-    r'\bpip\s+install\b',
-    r'\bnpm\s+install\b',
-    r'\bsystemctl\b',
-    r'\bkill\s+\d+',
-    r'\bmv\b.*',
-    r'\bcp\s+-r\b',
-    r'\bchmod\b',
-    r'\bchown\b',
-    r'\bcrontab\b',
-    r'>\s*/etc/',             # writing to /etc
-    r'>>\s*/etc/',
-    r'\bgit\s+push\b',
-    r'\bgit\s+reset\b',
-    r'\bgit\s+force\b',
+    r"\bsudo\b",
+    r"\bapt\b",
+    r"\bdpkg\b",
+    r"\bpip\s+install\b",
+    r"\bnpm\s+install\b",
+    r"\bsystemctl\b",
+    r"\bkill\s+\d+",
+    r"\bmv\b.*",
+    r"\bcp\s+-r\b",
+    r"\bchmod\b",
+    r"\bchown\b",
+    r"\bcrontab\b",
+    r">\s*/etc/",  # writing to /etc
+    r">>\s*/etc/",
+    r"\bgit\s+push\b",
+    r"\bgit\s+reset\b",
+    r"\bgit\s+force\b",
 ]
 
 # ── Patterns: always safe (read-only) ─────────────────────────────────────────
 SAFE_PATTERNS = [
-    r'^ls(\s|$)',
-    r'^cat\b',
-    r'^echo\b',
-    r'^pwd$',
-    r'^ps\b',
-    r'^df\b',
-    r'^free\b',
-    r'^uname\b',
-    r'^whoami$',
-    r'^date\b',
-    r'^uptime\b',
-    r'^hostname$',
-    r'^which\b',
-    r'^find\b.*-name\b',
-    r'^grep\b',
-    r'^head\b',
-    r'^tail\b',
-    r'^wc\b',
-    r'^sort\b',
-    r'^uniq\b',
-    r'^cut\b',
-    r'^awk\b',
-    r'^sed\b',
-    r'^diff\b',
-    r'^journalctl\b',
-    r'^systemctl\s+(status|is-active|list-units)\b',
-    r'^top\b',
-    r'^htop\b',
-    r'^nvidia-smi\b',
-    r'^git\s+(status|log|diff|show)\b',
+    r"^ls(\s|$)",
+    r"^cat\b",
+    r"^echo\b",
+    r"^pwd$",
+    r"^ps\b",
+    r"^df\b",
+    r"^free\b",
+    r"^uname\b",
+    r"^whoami$",
+    r"^date\b",
+    r"^uptime\b",
+    r"^hostname$",
+    r"^which\b",
+    r"^find\b.*-name\b",
+    r"^grep\b",
+    r"^head\b",
+    r"^tail\b",
+    r"^wc\b",
+    r"^sort\b",
+    r"^uniq\b",
+    r"^cut\b",
+    r"^awk\b",
+    r"^sed\b",
+    r"^diff\b",
+    r"^journalctl\b",
+    r"^systemctl\s+(status|is-active|list-units)\b",
+    r"^top\b",
+    r"^htop\b",
+    r"^nvidia-smi\b",
+    r"^git\s+(status|log|diff|show)\b",
     r'^python3?\s+-c\s+["\']?print\b',
-    r'^pip\s+(list|show|freeze)\b',
-    r'^ollama\s+(list|show|ps)\b',
+    r"^pip\s+(list|show|freeze)\b",
+    r"^ollama\s+(list|show|ps)\b",
 ]
 
 
@@ -132,11 +132,11 @@ class SafetyLayer:
         (e.g. rm -rf / — never run this no matter what)
         """
         dangerous = [
-            r'rm\s+-[rf]+\s+/',           # rm -rf /
-            r'rm\s+-[rf]+\s+\*',          # rm -rf *
-            r'dd\s+.*of=/dev/[sh]d[a-z]', # dd to whole disk
-            r'mkfs\s+/dev/[sh]d[a-z]$',  # format whole disk
-            r'>\s*/dev/[sh]d[a-z]$',      # overwrite whole disk
+            r"rm\s+-[rf]+\s+/",  # rm -rf /
+            r"rm\s+-[rf]+\s+\*",  # rm -rf *
+            r"dd\s+.*of=/dev/[sh]d[a-z]",  # dd to whole disk
+            r"mkfs\s+/dev/[sh]d[a-z]$",  # format whole disk
+            r">\s*/dev/[sh]d[a-z]$",  # overwrite whole disk
         ]
         for pattern in dangerous:
             if re.search(pattern, command, re.IGNORECASE):
@@ -159,18 +159,16 @@ class SafetyLayer:
 
         def _show_dialog():
             # Determine risk level for dialog styling
-            risk = 'HIGH' if any(
-                re.search(p, command, re.IGNORECASE)
-                for p in DESTRUCTIVE_PATTERNS
-            ) else 'MODERATE'
+            risk = (
+                "HIGH"
+                if any(re.search(p, command, re.IGNORECASE) for p in DESTRUCTIVE_PATTERNS)
+                else "MODERATE"
+            )
 
-            emoji = '🔴' if risk == 'HIGH' else '⚠️'
+            emoji = "🔴" if risk == "HIGH" else "⚠️"
             msg = QMessageBox()
             msg.setWindowTitle(f"Flash Copilot — {emoji} Confirm Command")
-            msg.setWindowFlags(
-                msg.windowFlags() |
-                Qt.WindowType.WindowStaysOnTopHint
-            )
+            msg.setWindowFlags(msg.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
 
             msg.setText(
                 f"<b>Flash wants to run this command:</b><br><br>"
@@ -183,23 +181,21 @@ class SafetyLayer:
             if explanation:
                 msg.setInformativeText(explanation)
 
-            msg.setStandardButtons(
-                QMessageBox.StandardButton.Yes |
-                QMessageBox.StandardButton.No
-            )
+            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             msg.setDefaultButton(QMessageBox.StandardButton.No)
             msg.button(QMessageBox.StandardButton.Yes).setText("Run It ✓")
             msg.button(QMessageBox.StandardButton.No).setText("Cancel ✗")
 
             choice = msg.exec()
-            result[0] = (choice == QMessageBox.StandardButton.Yes)
+            result[0] = choice == QMessageBox.StandardButton.Yes
             event.set()
 
         # Schedule on Qt main thread
         app = QApplication.instance()
         if app:
-            app.callInMainThread(_show_dialog) \
-                if hasattr(app, 'callInMainThread') else _show_dialog()
+            app.callInMainThread(_show_dialog) if hasattr(
+                app, "callInMainThread"
+            ) else _show_dialog()
         else:
             _show_dialog()
 
@@ -210,9 +206,9 @@ class SafetyLayer:
     def get_risk_label(self, command: str) -> str:
         """Return a human-readable risk label."""
         if self.is_blocked(command):
-            return 'BLOCKED'
+            return "BLOCKED"
         if any(re.search(p, command, re.IGNORECASE) for p in DESTRUCTIVE_PATTERNS):
-            return 'HIGH'
+            return "HIGH"
         if any(re.search(p, command, re.IGNORECASE) for p in REVIEW_PATTERNS):
-            return 'MODERATE'
-        return 'SAFE'
+            return "MODERATE"
+        return "SAFE"

@@ -23,27 +23,27 @@ import logging
 import threading
 from typing import Callable, Optional
 
-log = logging.getLogger('flash.hotkey')
+log = logging.getLogger("flash.hotkey")
 
 
 # Map friendly names to pynput Key objects
 KEY_MAP = {
-    'ctrl_r':     None,   # resolved dynamically
-    'ctrl_l':     None,
-    'alt_r':      None,
-    'alt_l':      None,
-    'shift_r':    None,
-    'scroll_lock': None,
-    'pause':      None,
-    'f10':        None,
-    'f11':        None,
-    'f12':        None,
-    'caps_lock':  None,
-    'insert':     None,
-    'home':       None,
-    'end':        None,
-    'page_up':    None,
-    'page_down':  None,
+    "ctrl_r": None,  # resolved dynamically
+    "ctrl_l": None,
+    "alt_r": None,
+    "alt_l": None,
+    "shift_r": None,
+    "scroll_lock": None,
+    "pause": None,
+    "f10": None,
+    "f11": None,
+    "f12": None,
+    "caps_lock": None,
+    "insert": None,
+    "home": None,
+    "end": None,
+    "page_up": None,
+    "page_down": None,
 }
 
 
@@ -55,9 +55,9 @@ class HotkeyListener:
 
     def __init__(
         self,
-        hotkey: str = 'ctrl_r',
+        hotkey: str = "ctrl_r",
         on_press: Optional[Callable] = None,
-        on_release: Optional[Callable] = None
+        on_release: Optional[Callable] = None,
     ):
         self.hotkey_name = hotkey
         self.on_press_cb = on_press
@@ -75,28 +75,26 @@ class HotkeyListener:
             from pynput.keyboard import Key
 
             key_map = {
-                'ctrl_r':      Key.ctrl_r,
-                'ctrl_l':      Key.ctrl_l,
-                'alt_r':       Key.alt_r,
-                'alt_l':       Key.alt_l,
-                'shift_r':     Key.shift_r,
-                'scroll_lock': Key.scroll_lock,
-                'pause':       Key.pause,
-                'f10':         Key.f10,
-                'f11':         Key.f11,
-                'f12':         Key.f12,
-                'caps_lock':   Key.caps_lock,
-                'insert':      Key.insert,
-                'home':        Key.home,
-                'end':         Key.end,
-                'page_up':     Key.page_up,
-                'page_down':   Key.page_down,
+                "ctrl_r": Key.ctrl_r,
+                "ctrl_l": Key.ctrl_l,
+                "alt_r": Key.alt_r,
+                "alt_l": Key.alt_l,
+                "shift_r": Key.shift_r,
+                "scroll_lock": Key.scroll_lock,
+                "pause": Key.pause,
+                "f10": Key.f10,
+                "f11": Key.f11,
+                "f12": Key.f12,
+                "caps_lock": Key.caps_lock,
+                "insert": Key.insert,
+                "home": Key.home,
+                "end": Key.end,
+                "page_up": Key.page_up,
+                "page_down": Key.page_down,
             }
             key = key_map.get(name.lower())
             if key is None:
-                log.warning(
-                    f"Unknown hotkey '{name}'. Defaulting to ctrl_r."
-                )
+                log.warning(f"Unknown hotkey '{name}'. Defaulting to ctrl_r.")
                 key = Key.ctrl_r
             log.info(f"Push-to-talk key: {key}")
             return key
@@ -152,7 +150,7 @@ class HotkeyListener:
             with Listener(
                 on_press=on_press,
                 on_release=on_release,
-                suppress=False  # Don't block the key from other apps
+                suppress=False,  # Don't block the key from other apps
             ) as listener:
                 self._listener = listener
                 listener.join()

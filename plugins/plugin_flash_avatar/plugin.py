@@ -22,6 +22,7 @@ try:
     from PyQt6.QtCore import QRect, Qt, QTimer
     from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
     from PyQt6.QtWidgets import QApplication, QMenu, QWidget
+
     HAVE_QT = True
 except ImportError:
     HAVE_QT = False
@@ -30,13 +31,17 @@ try:
     from pygpt_net.core.dispatcher import Event
     from pygpt_net.plugin.base import BasePlugin
 except ImportError:
+
     class BasePlugin:
         def __init__(self):
             self.id = ""
             self.name = ""
             self.description = ""
             self.options = {}
-        def add_option(self, *args, **kwargs): pass
+
+        def add_option(self, *args, **kwargs):
+            pass
+
     class Event:
         pass
 
@@ -49,16 +54,16 @@ class AvatarOrb(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.state = 'idle'
+        self.state = "idle"
         self._tick = 0.0
         self._wave = [0.0] * 10
         self._spin = 0.0
         self._drag_pos = None
 
         self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.Tool
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
@@ -80,7 +85,7 @@ class AvatarOrb(QWidget):
         self._tick += 0.06
         self._spin = (self._spin + 4) % 360
 
-        if self.state == 'listening':
+        if self.state == "listening":
             for i in range(len(self._wave)):
                 t = abs(math.sin(self._tick * 3.5 + i * 0.6))
                 self._wave[i] += (t - self._wave[i]) * 0.35
@@ -94,17 +99,17 @@ class AvatarOrb(QWidget):
 
         # Colors per state
         colors = {
-            'idle':      (QColor(15, 15, 35, 210), QColor(80, 80, 220, 80)),
-            'listening': (QColor(5, 20, 50, 220),  QColor(30, 144, 255, 110)),
-            'thinking':  (QColor(30, 18, 5, 215),  QColor(255, 165, 0, 110)),
-            'speaking':  (QColor(5, 30, 12, 215),  QColor(50, 205, 50, 110)),
-            'error':     (QColor(40, 5, 5, 215),   QColor(255, 50, 50, 110)),
+            "idle": (QColor(15, 15, 35, 210), QColor(80, 80, 220, 80)),
+            "listening": (QColor(5, 20, 50, 220), QColor(30, 144, 255, 110)),
+            "thinking": (QColor(30, 18, 5, 215), QColor(255, 165, 0, 110)),
+            "speaking": (QColor(5, 30, 12, 215), QColor(50, 205, 50, 110)),
+            "error": (QColor(40, 5, 5, 215), QColor(255, 50, 50, 110)),
         }
-        bg_col, glow_col = colors.get(self.state, colors['idle'])
+        bg_col, glow_col = colors.get(self.state, colors["idle"])
 
         # Pulse for idle and speaking
         scale = 1.0
-        if self.state in ('idle', 'speaking'):
+        if self.state in ("idle", "speaking"):
             scale = 1.0 + 0.06 * abs(math.sin(self._tick * 0.9))
 
         sr = int(r * scale)
@@ -117,16 +122,15 @@ class AvatarOrb(QWidget):
         # Glow ring
         p.setPen(QPen(glow_col, 2.5))
         p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawEllipse(cx - sr - 3, cy - sr - 3,
-                      (sr + 3) * 2, (sr + 3) * 2)
+        p.drawEllipse(cx - sr - 3, cy - sr - 3, (sr + 3) * 2, (sr + 3) * 2)
 
         # Inner animation
-        if self.state == 'idle':
+        if self.state == "idle":
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(QBrush(QColor(120, 120, 255, 160)))
             p.drawEllipse(cx - 6, cy - 6, 12, 12)
 
-        elif self.state == 'listening':
+        elif self.state == "listening":
             p.setPen(Qt.PenStyle.NoPen)
             bw = 4
             n = len(self._wave)
@@ -135,18 +139,16 @@ class AvatarOrb(QWidget):
             for i, h in enumerate(self._wave):
                 bh = int(h * 26)
                 p.setBrush(QBrush(QColor(30, 144, 255, 220)))
-                p.drawRoundedRect(sx + i * (bw + 2),
-                                   cy - bh // 2, bw, bh, 1, 1)
+                p.drawRoundedRect(sx + i * (bw + 2), cy - bh // 2, bw, bh, 1, 1)
 
-        elif self.state == 'thinking':
-            p.setPen(QPen(QColor(255, 165, 0, 200), 2.5,
-                          Qt.PenStyle.SolidLine,
-                          Qt.PenCapStyle.RoundCap))
+        elif self.state == "thinking":
+            p.setPen(
+                QPen(QColor(255, 165, 0, 200), 2.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+            )
             p.setBrush(Qt.BrushStyle.NoBrush)
-            p.drawArc(QRect(cx - 18, cy - 18, 36, 36),
-                      int(self._spin) * 16, 110 * 16)
+            p.drawArc(QRect(cx - 18, cy - 18, 36, 36), int(self._spin) * 16, 110 * 16)
 
-        elif self.state == 'speaking':
+        elif self.state == "speaking":
             p.setPen(Qt.PenStyle.NoPen)
             for i in range(3):
                 a = math.radians(self._spin + i * 120)
@@ -156,14 +158,14 @@ class AvatarOrb(QWidget):
 
         # State label
         labels = {
-            'idle': 'FLASH', 'listening': 'MIC',
-            'thinking': 'THINK', 'speaking': 'SPEAK',
+            "idle": "FLASH",
+            "listening": "MIC",
+            "thinking": "THINK",
+            "speaking": "SPEAK",
         }
         p.setPen(QColor(160, 160, 220, 200))
         p.setFont(QFont("Sans", 6))
-        p.drawText(QRect(0, 108, 120, 14),
-                   Qt.AlignmentFlag.AlignCenter,
-                   labels.get(self.state, ''))
+        p.drawText(QRect(0, 108, 120, 14), Qt.AlignmentFlag.AlignCenter, labels.get(self.state, ""))
 
     def mousePressEvent(self, e):
         if e.button() == Qt.MouseButton.LeftButton:
@@ -228,19 +230,19 @@ class Plugin(BasePlugin):
             return
 
         # Map PyGPT events to avatar states
-        name = getattr(event, 'name', '')
+        name = getattr(event, "name", "")
 
-        if 'input' in name and 'audio' in name:
-            self._orb.set_state('listening')
-        elif 'generate' in name or 'processing' in name:
-            self._orb.set_state('thinking')
-        elif 'response' in name or 'audio_output' in name:
-            self._orb.set_state('speaking')
-        elif 'done' in name or 'ready' in name or 'idle' in name:
-            self._orb.set_state('idle')
-        elif 'error' in name:
-            self._orb.set_state('error')
+        if "input" in name and "audio" in name:
+            self._orb.set_state("listening")
+        elif "generate" in name or "processing" in name:
+            self._orb.set_state("thinking")
+        elif "response" in name or "audio_output" in name:
+            self._orb.set_state("speaking")
+        elif "done" in name or "ready" in name or "idle" in name:
+            self._orb.set_state("idle")
+        elif "error" in name:
+            self._orb.set_state("error")
 
     def get_option_value(self, key: str):
         opt = self.options.get(key, {})
-        return opt.get('value', opt.get('default', ''))
+        return opt.get("value", opt.get("default", ""))

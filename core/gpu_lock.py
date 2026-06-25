@@ -32,7 +32,7 @@ import logging
 import threading
 import time
 
-log = logging.getLogger('flash.gpu_lock')
+log = logging.getLogger("flash.gpu_lock")
 
 
 class GPUResourceLock:
@@ -59,8 +59,7 @@ class GPUResourceLock:
 
         if not acquired:
             log.error(
-                f"[{self._name}] lock acquire TIMED OUT after 30s "
-                f"(held by: {self._holder})"
+                f"[{self._name}] lock acquire TIMED OUT after 30s " f"(held by: {self._holder})"
             )
             # Force-acquire anyway rather than hang the assistant forever —
             # this trades a possible CUDA contention error for guaranteed

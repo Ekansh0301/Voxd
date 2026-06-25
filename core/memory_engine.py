@@ -16,7 +16,7 @@ import logging
 import time
 from pathlib import Path
 
-log = logging.getLogger('flash.memory')
+log = logging.getLogger("flash.memory")
 
 MAX_MEMORY_ITEMS = 1000
 RECALL_LIMIT = 5
@@ -46,15 +46,15 @@ class MemoryEngine:
             from chromadb.config import Settings
 
             self._client = chromadb.PersistentClient(
-                path=str(self.db_path),
-                settings=Settings(anonymized_telemetry=False)
+                path=str(self.db_path), settings=Settings(anonymized_telemetry=False)
             )
 
             # Use sentence-transformers for embedding
             try:
                 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+
                 self._embedding_fn = SentenceTransformerEmbeddingFunction(
-                    model_name='all-MiniLM-L6-v2'  # Tiny, fast, good quality
+                    model_name="all-MiniLM-L6-v2"  # Tiny, fast, good quality
                 )
                 log.info("Using SentenceTransformer embeddings")
             except Exception:
@@ -63,9 +63,9 @@ class MemoryEngine:
 
             # Get or create collection
             self._collection = self._client.get_or_create_collection(
-                name='flash_memory',
+                name="flash_memory",
                 embedding_function=self._embedding_fn,
-                metadata={'hnsw:space': 'cosine'}
+                metadata={"hnsw:space": "cosine"},
             )
 
             # Get current item count
@@ -90,22 +90,15 @@ class MemoryEngine:
             doc_id = f"mem_{self._id_counter}_{int(time.time())}"
 
             # Store both user input and reply together
-            document = (
-                f"User said: {user_input}\n"
-                f"Flash replied: {assistant_reply}"
-            )
+            document = f"User said: {user_input}\n" f"Flash replied: {assistant_reply}"
 
             metadata = {
-                'user': user_input[:200],
-                'reply': assistant_reply[:500],
-                'timestamp': int(time.time()),
+                "user": user_input[:200],
+                "reply": assistant_reply[:500],
+                "timestamp": int(time.time()),
             }
 
-            self._collection.add(
-                documents=[document],
-                metadatas=[metadata],
-                ids=[doc_id]
-            )
+            self._collection.add(documents=[document], metadatas=[metadata], ids=[doc_id])
 
             # Prune old memories if over limit
             count = self._collection.count()
@@ -132,20 +125,17 @@ class MemoryEngine:
             results = self._collection.query(
                 query_texts=[query],
                 n_results=actual_limit,
-                include=['documents', 'metadatas', 'distances']
+                include=["documents", "metadatas", "distances"],
             )
 
-            if not results or not results['documents']:
+            if not results or not results["documents"]:
                 return ""
 
-            docs = results['documents'][0]
-            distances = results['distances'][0]
+            docs = results["documents"][0]
+            distances = results["distances"][0]
 
             # Filter by relevance (cosine distance < 0.8 = relevant)
-            relevant = [
-                doc for doc, dist in zip(docs, distances)
-                if dist < 0.8
-            ]
+            relevant = [doc for doc, dist in zip(docs, distances) if dist < 0.8]
 
             if not relevant:
                 return ""
@@ -164,16 +154,15 @@ class MemoryEngine:
         """Remove oldest memories when over limit."""
         try:
             all_items = self._collection.get(
-                include=['metadatas'],
+                include=["metadatas"],
             )
-            if not all_items or not all_items['ids']:
+            if not all_items or not all_items["ids"]:
                 return
 
             # Sort by timestamp, remove oldest 10%
-            ids_with_ts = list(zip(
-                all_items['ids'],
-                [m.get('timestamp', 0) for m in all_items['metadatas']]
-            ))
+            ids_with_ts = list(
+                zip(all_items["ids"], [m.get("timestamp", 0) for m in all_items["metadatas"]])
+            )
             ids_with_ts.sort(key=lambda x: x[1])
 
             to_remove = int(len(ids_with_ts) * 0.1)
@@ -191,10 +180,9 @@ class MemoryEngine:
         if not self._ready:
             return
         try:
-            self._client.delete_collection('flash_memory')
+            self._client.delete_collection("flash_memory")
             self._collection = self._client.get_or_create_collection(
-                name='flash_memory',
-                embedding_function=self._embedding_fn
+                name="flash_memory", embedding_function=self._embedding_fn
             )
             self._id_counter = 0
             log.info("Memory cleared.")
@@ -206,11 +194,11 @@ class MemoryEngine:
         if not self._ready:
             return []
         try:
-            all_items = self._collection.get(include=['metadatas'])
+            all_items = self._collection.get(include=["metadatas"])
             if not all_items:
                 return []
-            metas = all_items['metadatas']
-            metas.sort(key=lambda m: m.get('timestamp', 0), reverse=True)
+            metas = all_items["metadatas"]
+            metas.sort(key=lambda m: m.get("timestamp", 0), reverse=True)
             return metas[:n]
         except Exception as e:
             log.error(f"Get recent failed: {e}")
