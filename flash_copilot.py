@@ -724,7 +724,7 @@ class WorkerThread(QThread):
                 n = args.get("lines", 50)
                 service = args.get("service", "")
                 logs = self.desktop.get_logs(service, n)
-                return logs # type: ignore[no-any-return]
+                return logs  # type: ignore[no-any-return]
 
             elif name == "create_file":
                 path = args.get("path", args.get("value", "~/untitled.txt"))
@@ -789,7 +789,7 @@ class WorkerThread(QThread):
                 text = self.desktop.read_screen()
                 if len(text) > 300:
                     return str(self.brain.synthesize("screen content", text, [text]))
-                return text # type: ignore[no-any-return]
+                return text  # type: ignore[no-any-return]
 
             elif name == "type_text":
                 self.desktop.type_text(args.get("text", ""))
@@ -1049,7 +1049,7 @@ def load_config() -> dict:
     config_path = PROJECT_DIR / "config" / "config.json"
     if config_path.exists():
         with open(config_path) as f:
-            return json.load(f) # type: ignore[no-any-return]
+            return json.load(f)  # type: ignore[no-any-return]
 
     # Defaults
     model_file = PROJECT_DIR / "config" / "model.txt"
