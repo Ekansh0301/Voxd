@@ -29,7 +29,7 @@
   "user_country": "USA",
   "user_timezone": "America/New_York",
   "user_lat": 40.7128,
-  "user_lon": -74.0060,
+  "user_lon": -74.006,
   "type_responses": false,
   "chat_window_startup": false,
   "use_chatgpt_for_hard_tasks": false,

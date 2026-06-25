@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform: Linux](https://img.shields.io/badge/platform-Ubuntu%2022.04%2B-orange.svg)](#hardware-requirements)
 [![Ollama](https://img.shields.io/badge/LLM-Ollama%20%2F%20Qwen2.5-informational.svg)](https://ollama.com)
+[![CI](https://github.com/ekansh-the-great/voxd/actions/workflows/ci.yml/badge.svg)](https://github.com/ekansh-the-great/voxd/actions/workflows/ci.yml)
 [![Status: Active Development](https://img.shields.io/badge/status-active%20development-brightgreen.svg)](#roadmap)
 
 **A fully local, hands-free voice assistant for Ubuntu — no cloud, no API keys, no subscriptions.**
@@ -36,7 +37,7 @@ Vox listens for a push-to-talk hotkey, transcribes speech with Whisper, reasons 
 
 ## Demo
 
-> 🎥 *Demo video / GIF coming soon.*
+> 🎥 _Demo video / GIF coming soon._
 
 ---
 
@@ -108,40 +109,40 @@ A `core/gpu_lock.py` process-wide mutex serializes GPU-bound calls (Whisper tran
 
 ## Tech Stack
 
-| Layer | Technology | Why |
-|---|---|---|
-| Speech-to-Text | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (Small, CUDA fp16) | ~4x more accurate than Tiny on accented/non-native English speech, still fits comfortably in VRAM budget |
-| Language Model | [Ollama](https://ollama.com) + Qwen2.5 3B / Qwen2.5-Coder 3B | Native structured tool-calling support, dual-model routing (chat vs. code intent) |
-| Text-to-Speech | [Piper](https://github.com/rhasspy/piper) (neural TTS, CPU) | Natural-sounding offline voice, no GPU cost, interruptible playback |
-| Desktop Automation | `xdotool`, `scrot`, `tesseract-ocr` | Keyboard/window control, screenshot capture, OCR for screen-reading |
-| UI | PyQt6 | Animated avatar widget, floating chat window, system tray integration |
-| Memory | ChromaDB + sentence-transformers (MiniLM) | Local vector store for long-term conversational recall |
-| Weather | [Open-Meteo](https://open-meteo.com) | Free, no API key, no rate-limit hassle |
+| Layer              | Technology                                                                     | Why                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Speech-to-Text     | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (Small, CUDA fp16) | ~4x more accurate than Tiny on accented/non-native English speech, still fits comfortably in VRAM budget |
+| Language Model     | [Ollama](https://ollama.com) + Qwen2.5 3B / Qwen2.5-Coder 3B                   | Native structured tool-calling support, dual-model routing (chat vs. code intent)                        |
+| Text-to-Speech     | [Piper](https://github.com/rhasspy/piper) (neural TTS, CPU)                    | Natural-sounding offline voice, no GPU cost, interruptible playback                                      |
+| Desktop Automation | `xdotool`, `scrot`, `tesseract-ocr`                                            | Keyboard/window control, screenshot capture, OCR for screen-reading                                      |
+| UI                 | PyQt6                                                                          | Animated avatar widget, floating chat window, system tray integration                                    |
+| Memory             | ChromaDB + sentence-transformers (MiniLM)                                      | Local vector store for long-term conversational recall                                                   |
+| Weather            | [Open-Meteo](https://open-meteo.com)                                           | Free, no API key, no rate-limit hassle                                                                   |
 
 ---
 
 ## Hardware Requirements
 
-| | Minimum | Recommended |
-|---|---|---|
-| **GPU** | 4GB VRAM (GTX 1650 / 1660 class) | 6GB+ VRAM (RTX 3050 or better) — headroom for larger models or future on-device vision |
-| **CPU** | 4-core, x86_64 | 6-core+ — Piper TTS and OCR both run CPU-side |
-| **RAM** | 8GB system RAM | 16GB — leaves comfortable headroom alongside Chrome/VS Code etc. |
-| **Disk** | ~6GB free (models + voices + deps) | 10GB+ free, SSD recommended for model load times |
-| **OS** | Ubuntu 22.04 LTS | Ubuntu 22.04 / 24.04 LTS — other GNOME-based distros likely work but are untested |
-| **Microphone** | Any working input device | Headset mic — reduces echo/feedback during TTS playback |
-| **GPU driver** | NVIDIA driver with CUDA 12.1 support | Same, kept current |
+|                | Minimum                              | Recommended                                                                            |
+| -------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| **GPU**        | 4GB VRAM (GTX 1650 / 1660 class)     | 6GB+ VRAM (RTX 3050 or better) — headroom for larger models or future on-device vision |
+| **CPU**        | 4-core, x86_64                       | 6-core+ — Piper TTS and OCR both run CPU-side                                          |
+| **RAM**        | 8GB system RAM                       | 16GB — leaves comfortable headroom alongside Chrome/VS Code etc.                       |
+| **Disk**       | ~6GB free (models + voices + deps)   | 10GB+ free, SSD recommended for model load times                                       |
+| **OS**         | Ubuntu 22.04 LTS                     | Ubuntu 22.04 / 24.04 LTS — other GNOME-based distros likely work but are untested      |
+| **Microphone** | Any working input device             | Headset mic — reduces echo/feedback during TTS playback                                |
+| **GPU driver** | NVIDIA driver with CUDA 12.1 support | Same, kept current                                                                     |
 
 Vox was developed and tuned against the **minimum** spec above — a 4GB card was the design constraint, not an afterthought. See [Architecture](#architecture) and the VRAM budget table below for how that constraint shaped specific decisions (model size, sequential GPU access, CPU-side TTS).
 
 **Approximate VRAM usage at runtime** (Whisper Small + Qwen2.5 3B both loaded):
 
-| Component | VRAM |
-|---|---|
-| Qwen2.5 3B (Q4) | ~2.1 GB |
-| Whisper Small (fp16) | ~0.5 GB |
-| System / PyQt overhead | ~0.2 GB |
-| **Total used** | **~2.8 GB** |
+| Component                    | VRAM        |
+| ---------------------------- | ----------- |
+| Qwen2.5 3B (Q4)              | ~2.1 GB     |
+| Whisper Small (fp16)         | ~0.5 GB     |
+| System / PyQt overhead       | ~0.2 GB     |
+| **Total used**               | **~2.8 GB** |
 | **Free headroom (4GB card)** | **~1.2 GB** |
 
 ---
@@ -186,7 +187,6 @@ bash scripts/install_piper.sh
 bash scripts/setup_autostart.sh
 ```
 
-
 ### Run
 
 ```bash
@@ -211,7 +211,7 @@ All settings live in `config/config.json`.
   "user_city": "Your City",
   "user_timezone": "America/New_York",
   "user_lat": 40.7128,
-  "user_lon": -74.0060,
+  "user_lon": -74.006,
   "hotkey": "ctrl_r",
   "model": "qwen2.5:3b",
   "model_code": "qwen2.5-coder:3b",
@@ -220,14 +220,14 @@ All settings live in `config/config.json`.
 }
 ```
 
-| Key | Description |
-|---|---|
-| `assistant_name` / `user_name` | Personalizes how Vox refers to itself and you |
-| `user_city` / `user_lat` / `user_lon` | Used for weather and time-of-day reasoning |
-| `hotkey` | Push-to-talk key — see options below |
-| `model` / `model_code` | Ollama model names for conversational vs. code-related queries |
-| `voice` | Piper voice model filename (without extension) — see options below |
-| `type_responses` | If `true`, types Vox's replies into the currently focused window in addition to speaking them |
+| Key                                   | Description                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `assistant_name` / `user_name`        | Personalizes how Vox refers to itself and you                                                 |
+| `user_city` / `user_lat` / `user_lon` | Used for weather and time-of-day reasoning                                                    |
+| `hotkey`                              | Push-to-talk key — see options below                                                          |
+| `model` / `model_code`                | Ollama model names for conversational vs. code-related queries                                |
+| `voice`                               | Piper voice model filename (without extension) — see options below                            |
+| `type_responses`                      | If `true`, types Vox's replies into the currently focused window in addition to speaking them |
 
 ### Switching voices
 
@@ -260,16 +260,16 @@ If you're on a card tighter than 4GB, or want more headroom for other GPU work:
 
 ```json
 {
-  "model": "qwen2.5:1.5b",        // smaller model, ~1.1GB instead of ~2.1GB
-  "whisper_model_size": "base"     // smaller STT model, ~150MB instead of ~500MB
+  "model": "qwen2.5:1.5b", // smaller model, ~1.1GB instead of ~2.1GB
+  "whisper_model_size": "base" // smaller STT model, ~150MB instead of ~500MB
 }
 ```
 
-Trade-off: smaller models respond faster and leave more VRAM free, but tool-calling reliability and conversational quality both degrade noticeably below the 3B class — this is a real accuracy/footprint tradeoff, not a free lunch. If you have 6GB+ VRAM available, you can instead size *up*:
+Trade-off: smaller models respond faster and leave more VRAM free, but tool-calling reliability and conversational quality both degrade noticeably below the 3B class — this is a real accuracy/footprint tradeoff, not a free lunch. If you have 6GB+ VRAM available, you can instead size _up_:
 
 ```json
 {
-  "model": "qwen2.5:7b"           // ~4.7GB — noticeably stronger reasoning
+  "model": "qwen2.5:7b" // ~4.7GB — noticeably stronger reasoning
 }
 ```
 
@@ -277,18 +277,18 @@ Trade-off: smaller models respond faster and leave more VRAM free, but tool-call
 
 ## Usage Examples
 
-| You say | What Vox does |
-|---|---|
-| *"What's the weather like?"* | Fetches live weather for your configured location, answers in one turn |
-| *"Is it good weather for a walk?"* | Combines current weather + time of day into a direct recommendation |
-| *"Open YouTube and search for [X]"* | Opens browser, navigates, types your query |
-| *"What are my system specs?"* | Reads CPU/RAM/disk/GPU stats, speaks them as natural sentences (not raw numbers) |
-| *"What's on my screen right now?"* | Screenshots + OCRs the screen, summarizes the content |
-| *"Open a terminal and run `git status`"* | Executes the command, reports the result |
-| *"Create a file called notes.txt"* | Creates the file in your home directory |
-| *"Close this tab"* | Sends the appropriate keyboard shortcut |
-| *"What time is it?"* | Answers with current local time, no LLM round-trip needed |
-| *"Search cons of [X] on ChatGPT"* | Opens chatgpt.com and types the query directly into the page |
+| You say                                  | What Vox does                                                                    |
+| ---------------------------------------- | -------------------------------------------------------------------------------- |
+| _"What's the weather like?"_             | Fetches live weather for your configured location, answers in one turn           |
+| _"Is it good weather for a walk?"_       | Combines current weather + time of day into a direct recommendation              |
+| _"Open YouTube and search for [X]"_      | Opens browser, navigates, types your query                                       |
+| _"What are my system specs?"_            | Reads CPU/RAM/disk/GPU stats, speaks them as natural sentences (not raw numbers) |
+| _"What's on my screen right now?"_       | Screenshots + OCRs the screen, summarizes the content                            |
+| _"Open a terminal and run `git status`"_ | Executes the command, reports the result                                         |
+| _"Create a file called notes.txt"_       | Creates the file in your home directory                                          |
+| _"Close this tab"_                       | Sends the appropriate keyboard shortcut                                          |
+| _"What time is it?"_                     | Answers with current local time, no LLM round-trip needed                        |
+| _"Search cons of [X] on ChatGPT"_        | Opens chatgpt.com and types the query directly into the page                     |
 
 Press **Ctrl+Space** to toggle the floating chat window for typed interaction, or right-click the tray icon for plugin reload, conversation clearing, and settings.
 
@@ -298,17 +298,17 @@ Press **Ctrl+Space** to toggle the floating chat window for typed interaction, o
 
 The LLM has access to the following structured tools (via Ollama's `tools=` schema):
 
-| Tool | Purpose |
-|---|---|
-| `open_url` | Open any website or search query in the default browser |
-| `run_command` | Execute a shell command and return its output |
-| `get_system_info` | CPU, RAM, disk, GPU usage — converted to natural spoken language |
-| `open_app` | Launch a desktop application |
-| `create_file` | Create a file with specified content |
-| `read_screen` | Screenshot + OCR for screen-reading queries |
-| `keyboard_shortcut` | Send keyboard shortcuts (close tab, new window, etc.) |
-| `type_text` | Type text into the currently focused window |
-| `get_active_window` | Identify which application currently has focus |
+| Tool                | Purpose                                                          |
+| ------------------- | ---------------------------------------------------------------- |
+| `open_url`          | Open any website or search query in the default browser          |
+| `run_command`       | Execute a shell command and return its output                    |
+| `get_system_info`   | CPU, RAM, disk, GPU usage — converted to natural spoken language |
+| `open_app`          | Launch a desktop application                                     |
+| `create_file`       | Create a file with specified content                             |
+| `read_screen`       | Screenshot + OCR for screen-reading queries                      |
+| `keyboard_shortcut` | Send keyboard shortcuts (close tab, new window, etc.)            |
+| `type_text`         | Type text into the currently focused window                      |
+| `get_active_window` | Identify which application currently has focus                   |
 
 ---
 
@@ -377,4 +377,4 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-*Built solo as a hands-on exploration of local-first AI agent architecture: balancing LLM tool-calling against deterministic routing, and real-time voice I/O against consumer GPU VRAM constraints.*
+_Built solo as a hands-on exploration of local-first AI agent architecture: balancing LLM tool-calling against deterministic routing, and real-time voice I/O against consumer GPU VRAM constraints._
