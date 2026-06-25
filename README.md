@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform: Linux](https://img.shields.io/badge/platform-Ubuntu%2022.04%2B-orange.svg)](#hardware-requirements)
 [![Ollama](https://img.shields.io/badge/LLM-Ollama%20%2F%20Qwen2.5-informational.svg)](https://ollama.com)
-[![CI](https://github.com/ekansh-the-great/voxd/actions/workflows/ci.yml/badge.svg)](https://github.com/ekansh-the-great/voxd/actions/workflows/ci.yml)
+[![CI](https://github.com/Ekansh0301/Voxd/actions/workflows/ci.yml/badge.svg)](https://github.com/Ekansh0301/Voxd/actions/workflows/ci.yml)
 [![Status: Active Development](https://img.shields.io/badge/status-active%20development-brightgreen.svg)](#roadmap)
 
 **A fully local, hands-free voice assistant for Ubuntu — no cloud, no API keys, no subscriptions.**
