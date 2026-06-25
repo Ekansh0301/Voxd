@@ -1,0 +1,33 @@
+# Vox — runtime dependencies
+#
+# Python 3.11 required (developed and tested against 3.11.x; not verified
+# on 3.12+ or 3.10 and below).
+#
+# IMPORTANT — PyTorch is deliberately NOT listed here.
+# PyTorch's CUDA-enabled builds are distributed from a separate index
+# (download.pytorch.org), not standard PyPI, and the correct wheel depends
+# on your installed CUDA driver version (check with `nvidia-smi`). Installing
+# it via this file with a plain `pip install -r requirements.txt` risks
+# silently pulling a CPU-only or mismatched-CUDA build.
+#
+# Install it FIRST, separately, e.g. for CUDA 12.1:
+#   pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121
+# See README.md > Installation for details and other CUDA versions.
+
+PyQt6==6.6.1
+faster-whisper==1.0.3
+sounddevice==0.4.6
+soundfile==0.12.1
+numpy==1.26.4
+chromadb==0.4.22
+sentence-transformers==2.2.2
+psutil==5.9.6
+requests==2.31.0
+pynput==1.7.6
+ddgs==0.1.2
+
+# --- Optional: only needed if using the bundled PyGPT-style plugins ---
+# (plugins/plugin_piper_tts/, plugins/plugin_flash_avatar/)
+# Uncomment if you intend to run Vox's plugins inside or alongside a full
+# PyGPT installation rather than using the bundled plugin shims standalone.
+# pygpt-net==2.4.36
