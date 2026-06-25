@@ -16,20 +16,19 @@ Install:
 ================================================================================
 """
 
-import threading
 import math
 
 try:
-    from PyQt6.QtWidgets import QWidget, QApplication, QMenu
-    from PyQt6.QtCore import Qt, QTimer, QRect
-    from PyQt6.QtGui import QPainter, QColor, QBrush, QPen, QFont
+    from PyQt6.QtCore import QRect, Qt, QTimer
+    from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+    from PyQt6.QtWidgets import QApplication, QMenu, QWidget
     HAVE_QT = True
 except ImportError:
     HAVE_QT = False
 
 try:
-    from pygpt_net.plugin.base import BasePlugin
     from pygpt_net.core.dispatcher import Event
+    from pygpt_net.plugin.base import BasePlugin
 except ImportError:
     class BasePlugin:
         def __init__(self):

@@ -25,11 +25,10 @@ Architecture:
 
 import json
 import logging
-import os
 import re
-import time
 from pathlib import Path
 from typing import Optional
+
 from core.gpu_lock import GPU_LOCK
 
 log = logging.getLogger('flash.brain')
@@ -205,7 +204,6 @@ def _format_system_info(raw: str) -> str:
         ram_total = re.search(r'RAM\s+[\d.]+/([\d.]+) MB', raw)
         disk_used = re.search(r'Disk\s+([\d.]+)/[\d.]+ GB', raw)
         disk_total = re.search(r'Disk\s+[\d.]+/([\d.]+) GB', raw)
-        gpu = re.search(r'NVIDIA\s+([\w\s]+?)(?:\s+—|\s*$)', raw)
         vram_used = re.search(r'VRAM\s+([\d.]+)/([\d.]+)\s*MB', raw)
         temp = re.search(r'Temp\s+([\d.]+)°C', raw)
 
@@ -368,7 +366,7 @@ class Brain:
         msgs += self.history[-18:]
 
         try:
-            with GPU_LOCK:  
+            with GPU_LOCK:
                 r = req.post('http://localhost:11434/api/chat', json={
                     'model': model,
                     'messages': msgs,
@@ -415,7 +413,7 @@ class Brain:
         """Minimal fallback when main LLM call fails."""
         import requests as req
         try:
-            with GPU_LOCK:  
+            with GPU_LOCK:
                 r = req.post('http://localhost:11434/api/chat', json={
                     'model': self.model,
                     'messages': [
@@ -508,7 +506,7 @@ class Brain:
         )
         try:
             import requests as req
-            with GPU_LOCK:  
+            with GPU_LOCK:
                 r = req.post('http://localhost:11434/api/chat', json={
                     'model': self.model,
                     'messages': [

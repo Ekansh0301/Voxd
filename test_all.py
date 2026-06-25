@@ -14,11 +14,11 @@ Usage:
 ================================================================================
 """
 
-import sys
-import os
-import time
 import argparse
+import os
 import subprocess
+import sys
+import time
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent
@@ -201,7 +201,7 @@ def test_tts():
     voice_file = onnx_files[0]
     info(f"Testing synthesis with: {voice_file.stem}")
 
-    import tempfile, os
+    import tempfile
     with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
         tmp_path = tmp.name
 
@@ -318,8 +318,9 @@ def test_memory():
         return
 
     try:
-        from core.memory_engine import MemoryEngine
         import tempfile
+
+        from core.memory_engine import MemoryEngine
 
         with tempfile.TemporaryDirectory() as tmp:
             mem = MemoryEngine(Path(tmp))
@@ -359,7 +360,6 @@ def test_hotkey():
     head("[ Hotkey Listener ]")
 
     try:
-        from pynput.keyboard import Key
         ok("pynput: installed")
 
         from core.hotkey_listener import HotkeyListener

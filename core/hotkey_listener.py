@@ -72,7 +72,7 @@ class HotkeyListener:
     def _resolve_key(self, name: str):
         """Convert string name to pynput Key object."""
         try:
-            from pynput.keyboard import Key, KeyCode
+            from pynput.keyboard import Key
 
             key_map = {
                 'ctrl_r':      Key.ctrl_r,

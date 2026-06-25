@@ -14,50 +14,64 @@ A Jarvis-style local AI avatar for Ubuntu.
 ================================================================================
 """
 
-import sys
-import os
-import json
-import re
-import subprocess
-import threading
-import time
-import queue
-import logging
 import argparse
+import json
+import logging
+import queue
 import signal
+import subprocess
+import sys
+import threading
 from pathlib import Path
 from typing import Optional
 
-# ── Qt imports ────────────────────────────────────────────────────────────────
-from PyQt6.QtWidgets import (
-    QApplication, QWidget, QSystemTrayIcon, QMenu,
-    QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTextEdit, QLineEdit, QScrollArea, QFrame,
-    QSizePolicy, QSplitter
-)
 from PyQt6.QtCore import (
-    Qt, QTimer, QThread, pyqtSignal, QPropertyAnimation,
-    QEasingCurve, QPoint, QRect, pyqtProperty, QObject,
-    QSize
+    QObject,
+    QRect,
+    Qt,
+    QThread,
+    QTimer,
+    pyqtSignal,
 )
 from PyQt6.QtGui import (
-    QPainter, QColor, QBrush, QPen, QFont, QIcon,
-    QRadialGradient, QPainterPath, QPixmap, QTextCursor,
-    QKeySequence, QShortcut
+    QBrush,
+    QColor,
+    QFont,
+    QIcon,
+    QKeySequence,
+    QPainter,
+    QPen,
+    QPixmap,
+    QShortcut,
+    QTextCursor,
+)
+
+# ── Qt imports ────────────────────────────────────────────────────────────────
+from PyQt6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMenu,
+    QPushButton,
+    QSystemTrayIcon,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 # ── Project imports ───────────────────────────────────────────────────────────
 PROJECT_DIR = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-from core.voice_engine import VoiceEngine
-from core.brain import Brain, _format_for_speech
-from core.desktop_control import DesktopControl
-from core.memory_engine import MemoryEngine
-from core.hotkey_listener import HotkeyListener
-from core.safety import SafetyLayer
-from core.monitor import ProactiveMonitor
-from core.plugin_loader import PluginLoader
+from core.brain import Brain, _format_for_speech  # noqa: E402
+from core.desktop_control import DesktopControl  # noqa: E402
+from core.hotkey_listener import HotkeyListener  # noqa: E402
+from core.memory_engine import MemoryEngine  # noqa: E402
+from core.monitor import ProactiveMonitor  # noqa: E402
+from core.plugin_loader import PluginLoader  # noqa: E402
+from core.safety import SafetyLayer  # noqa: E402
+from core.voice_engine import VoiceEngine  # noqa: E402
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -152,7 +166,6 @@ class AvatarWidget(QWidget):
 
     def _tick(self):
         self._anim_tick += 0.05
-        dt = 0.05
 
         if self.state == AvatarState.IDLE:
             self._pulse_scale = 1.0 + 0.06 * abs(
@@ -160,7 +173,7 @@ class AvatarWidget(QWidget):
             )
 
         elif self.state == AvatarState.LISTENING:
-            import random, math
+            import math
             for i in range(len(self._wave_bars)):
                 target = 0.3 + 0.7 * abs(math.sin(
                     self._anim_tick * 3 + i * 0.7
@@ -815,7 +828,7 @@ class WorkerThread(QThread):
 
             elif name == 'type_text':
                 self.desktop.type_text(args.get('text', ''))
-                return f"Typed text."
+                return "Typed text."
 
             else:
                 return None
@@ -1099,7 +1112,7 @@ def run_test():
     print("Testing Ollama...", end=' ', flush=True)
     try:
         import requests
-        r = requests.get('http://localhost:11434', timeout=3)
+        requests.get('http://localhost:11434', timeout=3)
         print("✓ Online")
     except Exception as e:
         print(f"✗ FAILED: {e}")
@@ -1108,7 +1121,7 @@ def run_test():
     print("Testing Whisper...", end=' ', flush=True)
     try:
         from faster_whisper import WhisperModel
-        m = WhisperModel('tiny', device='cpu', compute_type='int8')
+        WhisperModel('tiny', device='cpu', compute_type='int8')
         print("✓ Loaded")
     except Exception as e:
         print(f"✗ FAILED: {e}")

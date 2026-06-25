@@ -11,10 +11,9 @@ Blocks the most dangerous patterns entirely.
 import logging
 import re
 import threading
-from typing import Optional
 
-from PyQt6.QtWidgets import QMessageBox, QApplication
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QApplication, QMessageBox
 
 log = logging.getLogger('flash.safety')
 

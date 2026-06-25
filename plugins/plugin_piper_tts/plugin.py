@@ -22,12 +22,11 @@ import subprocess
 import tempfile
 import threading
 from pathlib import Path
-from typing import Optional
 
 # PyGPT plugin base class
 try:
-    from pygpt_net.plugin.base import BasePlugin
     from pygpt_net.core.dispatcher import Event
+    from pygpt_net.plugin.base import BasePlugin
 except ImportError:
     # Fallback for testing outside PyGPT
     class BasePlugin:
@@ -129,7 +128,7 @@ class Plugin(BasePlugin):
 
             if not voice_path.exists():
                 print(f"[PiperTTS] Voice not found: {voice_path}")
-                print(f"[PiperTTS] Run install.sh to download voices.")
+                print("[PiperTTS] Run install.sh to download voices.")
                 return
 
             clean_text = self._clean(text)
@@ -170,7 +169,7 @@ class Plugin(BasePlugin):
                     timeout=30
                 )
                 if proc2.returncode != 0:
-                    print(f"[PiperTTS] Both piper methods failed")
+                    print("[PiperTTS] Both piper methods failed")
                     return
 
             # Play the WAV

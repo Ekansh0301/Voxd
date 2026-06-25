@@ -16,7 +16,6 @@ import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 from zoneinfo import ZoneInfo
 
 import psutil
@@ -224,7 +223,7 @@ class DesktopControl:
                                 ['find', search_dir, '-name', filename,
                                  '-maxdepth', '6', '-not', '-path', '*/.*'],
                                 capture_output=True, text=True, timeout=5)
-                            found = [l for l in r.stdout.strip().split('\n') if l]
+                            found = [line for line in r.stdout.strip().split('\n') if line]
                             if found:
                                 path = found[0]
                                 content = self.read_file(path)
@@ -293,8 +292,10 @@ class DesktopControl:
         except Exception as e:
             return f"Screen read error: {e}"
         finally:
-            try: os.unlink(path)
-            except Exception: pass
+            try:
+                os.unlink(path)
+            except Exception:
+                pass
 
     def take_screenshot(self) -> str:
         ts   = int(time.time())
@@ -360,9 +361,7 @@ class DesktopControl:
         now_dt  = datetime.now(self._tz)
         hour    = now_dt.hour
         temp    = w.get('temperature', 25)
-        code    = w.get('code', 0) if 'code' in w else 0
         wind    = w.get('wind_speed', 0)
-        is_day  = w.get('is_day', 1)
         cond    = w.get('condition', '')
 
         is_rain  = 'rain' in cond or 'drizzle' in cond or 'thunder' in cond

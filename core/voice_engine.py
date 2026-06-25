@@ -56,8 +56,8 @@ class VoiceEngine:
 
     def _load_whisper(self):
         try:
-            from faster_whisper import WhisperModel
             import torch
+            from faster_whisper import WhisperModel
             device  = 'cuda' if torch.cuda.is_available() else 'cpu'
             compute = 'float16' if device == 'cuda' else 'int8'
             log.info(f"Loading Whisper Small on {device}/{compute}...")
@@ -120,7 +120,7 @@ class VoiceEngine:
 
         with self._stt_lock:
             try:
-                with GPU_LOCK: 
+                with GPU_LOCK:
                     segments, _ = self._whisper.transcribe(
                         audio,
                         beam_size=3,
@@ -252,15 +252,18 @@ class VoiceEngine:
             log.error(f"Piper error: {e}")
         finally:
             if tmp_path:
-                try: os.unlink(tmp_path)
-                except Exception: pass
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
 
     def _play_interruptible(self, path: str):
         try:
             data, sr = sf.read(path, dtype='float32')
             # Normalize to prevent clipping
             peak = abs(data).max()
-            if peak > 0.85: data = data * (0.85 / peak)
+            if peak > 0.85:
+                data = data * (0.85 / peak)
             chunk_size = int(sr * 0.30)
             for i in range(0, len(data), chunk_size):
                 if self._stop_speaking:

@@ -4,11 +4,12 @@ Watches CPU, disk, memory, failed services in background.
 Calls alert_callback(message) when something needs attention.
 """
 import logging
+import subprocess
 import threading
 import time
-import subprocess
-import psutil
 from typing import Callable
+
+import psutil
 
 log = logging.getLogger('flash.monitor')
 

@@ -15,7 +15,6 @@ Flash remembers:
 import logging
 import time
 from pathlib import Path
-from typing import Optional
 
 log = logging.getLogger('flash.memory')
 
@@ -53,9 +52,7 @@ class MemoryEngine:
 
             # Use sentence-transformers for embedding
             try:
-                from chromadb.utils.embedding_functions import (
-                    SentenceTransformerEmbeddingFunction
-                )
+                from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
                 self._embedding_fn = SentenceTransformerEmbeddingFunction(
                     model_name='all-MiniLM-L6-v2'  # Tiny, fast, good quality
                 )

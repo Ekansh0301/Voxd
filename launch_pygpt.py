@@ -11,9 +11,9 @@ Usage:
 ================================================================================
 """
 
-import sys
-import os
 import json
+import os
+import sys
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent
@@ -36,17 +36,16 @@ voices_dir = str(PROJECT_DIR / flash_config.get('voices_dir', 'voices'))
 def patch_and_launch():
     try:
         from pygpt_net.app import run
-        from pygpt_net.container import Container
 
         # Pre-configure Ollama endpoint
         os.environ['OPENAI_API_BASE'] = 'http://localhost:11434/v1'
         os.environ['OPENAI_API_KEY']  = 'ollama'  # Ollama ignores API keys
 
-        print(f"\n[Flash] Launching PyGPT with:")
+        print("\n[Flash] Launching PyGPT with:")
         print(f"  Model:  {model}")
         print(f"  Voice:  {voice}")
         print(f"  Voices: {voices_dir}")
-        print(f"  Plugins: Piper TTS + Flash Avatar\n")
+        print("  Plugins: Piper TTS + Flash Avatar\n")
 
         # Run PyGPT — plugins will be picked up from ~/.config/pygpt-net/plugins/
         run()
