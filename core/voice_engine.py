@@ -36,13 +36,13 @@ class VoiceEngine:
         self.voices_dir = Path(voices_dir)
         self.voice_model = voice_model
         self._recording = False
-        self._audio_buf = []
+        self._audio_buf: list = []
         self._stream = None
         self._whisper = None
         self._stt_lock = threading.Lock()
         self._tts_lock = threading.Lock()
         self._stop_speaking = False
-        self._piper_proc = None  # track piper process for hard kill
+        self._process: Optional[subprocess.Popen] = None  # track piper process for hard kill
 
         # Locate piper binary
         project_dir = Path(__file__).parent.parent
@@ -101,7 +101,7 @@ class VoiceEngine:
         audio = np.concatenate(self._audio_buf).flatten()
         audio = self._trim_silence(audio)
         log.info(f"Recorded {len(audio)/SAMPLE_RATE:.2f}s of audio")
-        return audio
+        return audio  # type: ignore[no-any-return]
 
     def _trim_silence(self, audio: np.ndarray, threshold: float = 0.006) -> np.ndarray:
         nonsilent = np.where(np.abs(audio) > threshold)[0]

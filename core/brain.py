@@ -64,7 +64,7 @@ SITES = {
 
 def _cfg() -> dict:
     try:
-        return json.loads(CONFIG_PATH.read_text())
+        return json.loads(CONFIG_PATH.read_text())  # type: ignore[no-any-return]
     except Exception:
         return {}
 
@@ -298,7 +298,7 @@ class Brain:
         self.model = cfg.get("model", model)
         self.model_code = cfg.get("model_code", "qwen2.5-coder:3b")
         self.desktop = desktop
-        self.history = []  # full conversation history
+        self.history: list[dict] = []  # full conversation history
         self.router = QuickRouter()
         self._name = cfg.get("assistant_name", "Vox")
         self._user = cfg.get("user_name", "User")
@@ -582,8 +582,8 @@ class Brain:
         ]
         if any(k in text.lower() for k in code_kw):
             log.info(f"Code model selected: {self.model_code}")
-            return self.model_code
-        return self.model
+            return self.model_code  # type: ignore[no-any-return]
+        return self.model  # type: ignore[no-any-return]
 
     def _intent_spoken(self, intent: dict) -> str:
         a = intent.get("action", "")

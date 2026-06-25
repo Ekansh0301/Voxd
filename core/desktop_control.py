@@ -27,7 +27,7 @@ _CFG_PATH = Path(__file__).parent.parent / "config" / "config.json"
 
 def _cfg() -> dict:
     try:
-        return json.loads(_CFG_PATH.read_text())
+        return json.loads(_CFG_PATH.read_text())  # type: ignore[no-any-return]
     except Exception:
         return {}
 
@@ -538,10 +538,7 @@ class DesktopControl:
         try:
             from ddgs import DDGS
         except ImportError:
-            try:
-                from duckduckgo_search import DDGS
-            except ImportError:
-                return f"Opened browser search for: {query}"
+            return f"Opened browser search for: {query}"
         try:
             with DDGS() as d:
                 results = list(d.text(query, max_results=max_results))

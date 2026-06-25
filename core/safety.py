@@ -193,9 +193,11 @@ class SafetyLayer:
         # Schedule on Qt main thread
         app = QApplication.instance()
         if app:
-            app.callInMainThread(_show_dialog) if hasattr(
-                app, "callInMainThread"
-            ) else _show_dialog()
+            (
+                app.callInMainThread(_show_dialog)
+                if hasattr(app, "callInMainThread")
+                else _show_dialog()
+            )
         else:
             _show_dialog()
 

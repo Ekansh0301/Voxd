@@ -17,6 +17,7 @@ Example plugin file: plugins/custom/weather.py
           'handler': lambda q: 'Weather plugin: ...'
       }
 """
+
 import importlib.util
 import logging
 from pathlib import Path
@@ -70,7 +71,7 @@ class PluginLoader:
             try:
                 handler = plugin.get("handler")
                 if callable(handler):
-                    return handler(text)
+                    return handler(text)  # type: ignore[no-any-return]
             except Exception as e:
                 log.error(f"Plugin {plugin['name']} error: {e}")
         return None

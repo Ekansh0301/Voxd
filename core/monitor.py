@@ -3,6 +3,7 @@ core/monitor.py — Proactive system monitor
 Watches CPU, disk, memory, failed services in background.
 Calls alert_callback(message) when something needs attention.
 """
+
 import logging
 import subprocess
 import threading

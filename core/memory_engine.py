@@ -15,6 +15,7 @@ Flash remembers:
 import logging
 import time
 from pathlib import Path
+from typing import Any
 
 log = logging.getLogger("flash.memory")
 
@@ -32,7 +33,7 @@ class MemoryEngine:
         self.db_path = Path(db_path)
         self.db_path.mkdir(parents=True, exist_ok=True)
         self._client = None
-        self._collection = None
+        self._collection: Any = None
         self._embedding_fn = None
         self._id_counter = 0
         self._ready = False
@@ -199,7 +200,7 @@ class MemoryEngine:
                 return []
             metas = all_items["metadatas"]
             metas.sort(key=lambda m: m.get("timestamp", 0), reverse=True)
-            return metas[:n]
+            return metas[:n]  # type: ignore[no-any-return]
         except Exception as e:
             log.error(f"Get recent failed: {e}")
             return []
@@ -210,6 +211,6 @@ class MemoryEngine:
         if not self._ready:
             return 0
         try:
-            return self._collection.count()
+            return self._collection.count()  # type: ignore[no-any-return]
         except Exception:
             return 0

@@ -3,8 +3,16 @@ name: CI
 # Runs static checks only — NOT the voice/LLM pipeline itself.
 # This project requires a GPU, microphone, and locally-running Ollama
 # models, none of which are available on GitHub-hosted runners. This
-# workflow validates code health (syntax, lint, dependency resolution)
-# rather than pretending to exercise the actual runtime.
+# workflow validates code health (syntax, lint, formatting, types,
+# dependency resolution) rather than pretending to exercise the actual
+# runtime.
+#
+# IMPORTANT: tool versions below are pinned to match pyproject.toml's
+# [project.optional-dependencies].dev exactly. If you bump a version in
+# pyproject.toml, update it here too — an unpinned `pip install black`
+# previously caused CI to silently use a newer black release than the
+# one developers run locally, producing "passes locally, fails in CI"
+# false failures.
 
 on:
   push:
@@ -25,10 +33,13 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install lint tooling
+      - name: Install project with dev tooling
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black mypy
+          # Installs ruff/black/mypy at the EXACT versions pinned in
+          # pyproject.toml's [project.optional-dependencies].dev — this
+          # is the single source of truth, matching what you run locally.
+          pip install -e ".[dev]"
 
       - name: Validate Python syntax (all files compile)
         run: |
@@ -52,11 +63,18 @@ jobs:
 
   dependency-check:
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Run dependency audit (if available)
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run dependency audit
         run: |
-          pip install pip-audit || echo "pip-audit not available, skipping"
-          pip-audit || echo "Advisory found but continuing"
+          pip install pip-audit
+          pip install -r requirements.txt
+          pip-audit --skip-editable || echo "Advisory found — review above, not blocking build"
