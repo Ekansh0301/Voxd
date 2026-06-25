@@ -55,7 +55,7 @@ jobs:
 
       - name: Type check with mypy
         run: |
-          mypy core/ --ignore-missing-imports
+          mypy . --ignore-missing-imports
 
       - name: Verify requirements.txt resolves
         run: |

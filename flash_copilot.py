@@ -677,7 +677,7 @@ class WorkerThread(QThread):
                 else:
                     return "Missing args for open_url_and_type"
                 if url and query:
-                    return self.desktop.open_url_and_type(url, query)
+                    return str(self.desktop.open_url_and_type(url, query))
                 elif url:
                     self.desktop.open_url(url)
                     return f"Opened: {url}"
@@ -698,23 +698,23 @@ class WorkerThread(QThread):
                 return f"Screenshot: {path}"
 
             elif name in ("get_system_info", "system_info"):
-                return self.desktop.get_system_info()
+                return str(self.desktop.get_system_info())
 
             elif name == "get_weather":
-                return self.desktop.get_weather_summary()
+                return str(self.desktop.get_weather_summary())
 
             elif name == "weather_activity":
                 if isinstance(args, dict):
                     activity = args.get("activity", "going outside")
                 else:
                     activity = "going outside"
-                return self.desktop.is_good_for_activity(activity)
+                return str(self.desktop.is_good_for_activity(activity))
 
             elif name == "get_time":
-                return self.desktop.get_current_time()
+                return str(self.desktop.get_current_time())
 
             elif name == "read_screen":
-                return self.desktop.read_screen()
+                return str(self.desktop.read_screen())
 
             elif name == "get_clipboard":
                 clip = self.desktop.get_clipboard()
@@ -724,7 +724,7 @@ class WorkerThread(QThread):
                 n = args.get("lines", 50)
                 service = args.get("service", "")
                 logs = self.desktop.get_logs(service, n)
-                return logs
+                return logs # type: ignore[no-any-return]
 
             elif name == "create_file":
                 path = args.get("path", args.get("value", "~/untitled.txt"))
@@ -740,7 +740,7 @@ class WorkerThread(QThread):
                 url = args.get("url", "")
                 query = args.get("query", "")
                 if url and query:
-                    return self.desktop.open_url_and_type(url, query)
+                    return str(self.desktop.open_url_and_type(url, query))
                 elif url:
                     self.desktop.open_url(url)
                     return f"Opened: {url}"
@@ -777,19 +777,19 @@ class WorkerThread(QThread):
 
             elif name == "keyboard_shortcut":
                 keys = args.get("keys", args.get("key", ""))
-                return self.desktop.keyboard_shortcut(keys)
+                return str(self.desktop.keyboard_shortcut(keys))
 
             elif name == "click_play":
-                return self.desktop.click_play()
+                return str(self.desktop.click_play())
 
             elif name == "vscode_file":
-                return self.desktop.vscode_file()
+                return str(self.desktop.vscode_file())
 
             elif name == "read_screen":
                 text = self.desktop.read_screen()
                 if len(text) > 300:
-                    return self.brain.synthesize("screen content", text, [text])
-                return text
+                    return str(self.brain.synthesize("screen content", text, [text]))
+                return text # type: ignore[no-any-return]
 
             elif name == "type_text":
                 self.desktop.type_text(args.get("text", ""))
@@ -798,24 +798,24 @@ class WorkerThread(QThread):
             elif name == "play_youtube":
                 query = args.get("query", "")
                 if query:
-                    return self.desktop.play_youtube(query)
+                    return str(self.desktop.play_youtube(query))
                 return "No query for play_youtube."
 
             elif name == "keyboard_shortcut":
                 keys = args.get("keys", "")
-                return self.desktop.keyboard_shortcut(keys)
+                return str(self.desktop.keyboard_shortcut(keys))
 
             elif name == "click_play":
-                return self.desktop.click_play()
+                return str(self.desktop.click_play())
 
             elif name == "vscode_file":
-                return self.desktop.vscode_file()
+                return str(self.desktop.vscode_file())
 
             elif name == "get_active_window":
-                return self.desktop.get_active_window()
+                return str(self.desktop.get_active_window())
 
             elif name == "read_screen":
-                return self.desktop.read_screen()
+                return str(self.desktop.read_screen())
 
             elif name == "type_text":
                 self.desktop.type_text(args.get("text", ""))
@@ -1049,7 +1049,7 @@ def load_config() -> dict:
     config_path = PROJECT_DIR / "config" / "config.json"
     if config_path.exists():
         with open(config_path) as f:
-            return json.load(f)
+            return json.load(f) # type: ignore[no-any-return]
 
     # Defaults
     model_file = PROJECT_DIR / "config" / "model.txt"
