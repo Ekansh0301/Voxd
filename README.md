@@ -11,10 +11,10 @@ A fully local, hands-free voice assistant for Ubuntu. Speech recognition, langua
 
 ```bash
 ollama pull qwen2.5:3b
-git clone https://github.com/<your-username>/voxd.git && cd voxd
+git clone https://github.com/Ekansh0301/Voxd.git && cd voxd
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-python3 vox.py
+python3 flash_copilot.py
 ```
 
 Hold Right Ctrl, speak, release. See [Installation](#installation) for the full setup, including system dependencies and CUDA-specific PyTorch.
@@ -68,8 +68,8 @@ Vox resolves every request through three layers, in order, rather than sending e
 
 ```
 input --> Quick Router --> Atomic Execution --> LLM + Tool Calling --> Tool Execution --> Speech
-          (deterministic)  (inline data calls)   (Ollama, structured     (desktop_control)   (formatted,
-                                                   tool_calls, not                             then Piper)
+        (deterministic)   (inline data calls)   (Ollama, structured    (desktop_control)  (formatted,
+                                                   tool_calls, not                          then Piper)
                                                    parsed free text)
 ```
 
@@ -159,7 +159,7 @@ PyTorch is intentionally absent from `requirements.txt`. CUDA-enabled wheels are
 
 ```bash
 source venv/bin/activate
-python3 vox.py
+python3 flash_copilot.py
 ```
 
 An avatar widget appears in the corner of the screen and an icon appears in the system tray.
@@ -252,7 +252,7 @@ These two bundled plugins are experimental and outside the actively maintained c
 
 ```
 voxd/
-├── vox.py                       Entry point: UI, tray, worker thread
+├── flash_copilot.py              Entry point: UI, tray, worker thread
 ├── core/
 │   ├── brain.py                  LLM reasoning, intent routing, tool calling
 │   ├── voice_engine.py           Whisper STT and Piper TTS
