@@ -191,36 +191,61 @@ pip install --quiet \
 
 log_ok "Python packages installed"
 
-# # ── STEP 7: Download Piper voice model ───────────────────────────────────────
-# log_step "Downloading Piper TTS voice models"
-# mkdir -p "$VOICES_DIR"
+# ── STEP 7: Download Piper voice models ──────────────────────────────────────
+log_step "Downloading Piper TTS voice models"
 
-# # Download Ryan (male, high quality) and Lessac (female alternative)
-# VOICE_BASE="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
+mkdir -p "$VOICES_DIR"
 
-# download_voice() {
-#     local lang=$1 speaker=$2 quality=$3
-#     local base_name="${lang}-${speaker}-${quality}"
-#     local onnx_url="${VOICE_BASE}/${lang//_//}/${speaker}/${quality}/${base_name}.onnx"
-#     local json_url="${VOICE_BASE}/${lang//_//}/${speaker}/${quality}/${base_name}.onnx.json"
+VOICE_BASE="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
 
-#     if [ ! -f "$VOICES_DIR/${base_name}.onnx" ]; then
-#         log_info "Downloading voice: $base_name"
-#         wget -q --show-progress -O "$VOICES_DIR/${base_name}.onnx" "$onnx_url" 2>&1 | tail -1
-#         wget -q -O "$VOICES_DIR/${base_name}.onnx.json" "$json_url"
-#         log_ok "Voice $base_name downloaded"
-#     else
-#         log_ok "Voice $base_name already exists"
-#     fi
-# }
+download_voice() {
+    local lang="$1"
+    local speaker="$2"
+    local quality="$3"
 
-# # Primary voice: Ryan (male, natural intonation)
-# download_voice "en_US" "ryan" "high"
-# # Backup voice: Lessac (female, clear)
-# download_voice "en_US" "lessac" "medium"
+    local family="${lang%%_*}"               # en
+    local base_name="${lang}-${speaker}-${quality}"
 
-# # Save default voice to config
-# echo "en_US-ryan-high" > "$CONFIG_DIR/voice.txt"
+    local onnx_url="${VOICE_BASE}/${family}/${lang}/${speaker}/${quality}/${base_name}.onnx"
+    local json_url="${VOICE_BASE}/${family}/${lang}/${speaker}/${quality}/${base_name}.onnx.json"
+
+    if [[ -f "$VOICES_DIR/${base_name}.onnx" && \
+          -f "$VOICES_DIR/${base_name}.onnx.json" ]]; then
+        log_ok "Voice '$base_name' already exists"
+        return 0
+    fi
+
+    log_info "Downloading '$base_name'..."
+
+    if ! wget --show-progress \
+        -O "$VOICES_DIR/${base_name}.onnx" \
+        "$onnx_url"; then
+        log_error "Failed to download ${base_name}.onnx"
+        rm -f "$VOICES_DIR/${base_name}.onnx"
+        return 1
+    fi
+
+    if ! wget \
+        -O "$VOICES_DIR/${base_name}.onnx.json" \
+        "$json_url"; then
+        log_error "Failed to download ${base_name}.onnx.json"
+        rm -f "$VOICES_DIR/${base_name}.onnx" \
+              "$VOICES_DIR/${base_name}.onnx.json"
+        return 1
+    fi
+
+    log_ok "Downloaded '$base_name'"
+}
+
+# Primary voice
+download_voice "en_US" "ryan" "high"
+
+# Backup voice
+download_voice "en_US" "lessac" "medium"
+
+# Save default voice
+echo "en_US-ryan-high" > "$CONFIG_DIR/voice.txt"
+log_ok "Default voice set to en_US-ryan-high"
 
 # ── STEP 8: Install faster-whisper model ─────────────────────────────────────
 log_step "Pre-downloading Whisper Tiny model"
