@@ -11,7 +11,7 @@ A fully local, hands-free voice assistant for Ubuntu. Speech recognition, langua
 
 ```bash
 ollama pull qwen2.5:3b
-git clone https://github.com/Ekansh0301/Voxd.git && cd voxd
+git clone https://github.com/Ekansh0301/Voxd.git && cd Voxd
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 python3 flash_copilot.py
@@ -137,7 +137,7 @@ ollama pull qwen2.5:3b
 ollama pull qwen2.5-coder:3b
 
 # Clone and set up the environment
-git clone https://github.com/<your-username>/voxd.git
+git clone https://github.com/Ekansh0301/Voxd.git
 cd voxd
 python3 -m venv venv
 source venv/bin/activate
@@ -149,7 +149,7 @@ pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 pip install -r requirements.txt
 
 # Piper TTS binary and default voice (~115 MB)
-bash scripts/install_piper.sh
+bash scripts/install.sh
 
 # Optional: start automatically on login
 bash scripts/setup_autostart.sh
@@ -251,7 +251,7 @@ These two bundled plugins are experimental and outside the actively maintained c
 ## Project structure
 
 ```
-voxd/
+Voxd/
 ├── flash_copilot.py              Entry point: UI, tray, worker thread
 ├── core/
 │   ├── brain.py                  LLM reasoning, intent routing, tool calling
