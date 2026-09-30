@@ -61,16 +61,16 @@ dmypy.json
 .ruff_cache/
 .flake8
 
-# Project-specific
-data/memory/
-piper_bin/
-voices/
+# Project-specific (models live in ~/.local/share/tars, never in the repo)
 *.onnx
 *.onnx.json
-config/config.json
-config/model.txt
-config/voice.txt
-config/venv/
+*.gguf
+# v1 prototype runtime files
+legacy/piper_bin/
+legacy/data/
+legacy/config/config.json
+legacy/config/model.txt
+legacy/config/voice.txt
 
 # Logs
 *.log
@@ -95,3 +95,10 @@ temp/
 Thumbs.db
 .AppleDouble
 .LSOverride
+
+# TARS benchmarks: personal voice recordings and local results
+bench/data/voice/
+bench/results/*.wav
+bench/results/*.log
+bench/results/tts/
+legacy/data/memory.bak-*/

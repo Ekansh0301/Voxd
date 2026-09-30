@@ -1,0 +1,144 @@
+{
+  "model": "qwen3.5-4b-q4km",
+  "file": "Qwen3.5-4B-Q4_K_M.gguf",
+  "ctx": 8192,
+  "kv": "q8_0",
+  "at": "2026-09-30 10:10",
+  "load_s": 7.0,
+  "vram_loaded_mib": 2952,
+  "speed": {
+    "prefill_tps": {
+      "512": 393.9,
+      "2048": 394.5,
+      "4096": 371.1
+    },
+    "prefill_ms": {
+      "512": 1300,
+      "2048": 5191,
+      "4096": 11036
+    },
+    "decode_tps": 28.9
+  },
+  "cache": {
+    "prefix_tokens": 2500,
+    "cold_prompt_ms": 6868,
+    "warm_prompt_ms": 146,
+    "warm_tokens_processed": 4,
+    "warm_tokens_from_cache": 2499
+  },
+  "tools": {
+    "n": 60,
+    "tool_acc": 0.9,
+    "args_acc": 0.883,
+    "valid": 1.0,
+    "latency_ms_median": 1213,
+    "latency_ms_p90": 1792,
+    "failures": [
+      {
+        "id": 7,
+        "prompt": "open outlook",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 10,
+        "prompt": "open whatsapp web",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 30,
+        "prompt": "switch to the previous window",
+        "got": "press_keys",
+        "args": {
+          "keys": "ctrl+tab"
+        }
+      },
+      {
+        "id": 33,
+        "prompt": "click on the first video",
+        "got": "read_screen",
+        "args": {
+          "focus": "the video"
+        }
+      },
+      {
+        "id": 47,
+        "prompt": "fill the internship form that is open in firefox with my details",
+        "got": "read_screen",
+        "args": {
+          "focus": "the form"
+        }
+      },
+      {
+        "id": 48,
+        "prompt": "my python script is crashing with an import error, fix it",
+        "got": "run_command",
+        "args": {
+          "command": "python -c \"import sys; print(sys.path)\""
+        }
+      },
+      {
+        "id": 51,
+        "prompt": "rename today's screenshots by their time",
+        "got": "get_datetime",
+        "args": {}
+      }
+    ]
+  },
+  "json": {
+    "n": 60,
+    "tool_acc": 0.917,
+    "args_acc": 0.9,
+    "valid": 1.0,
+    "latency_ms_median": 1982,
+    "latency_ms_p90": 3137,
+    "failures": [
+      {
+        "id": 18,
+        "prompt": "what is the time now",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 19,
+        "prompt": "which date is it today",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 24,
+        "prompt": "resume the music",
+        "got": "media_control",
+        "args": {
+          "action": "resume"
+        }
+      },
+      {
+        "id": 27,
+        "prompt": "mute the sound",
+        "got": "media_control",
+        "args": {
+          "action": "mute"
+        }
+      },
+      {
+        "id": 31,
+        "prompt": "type hello everyone in the chat box",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 33,
+        "prompt": "click on the first video",
+        "got": "none",
+        "args": {}
+      }
+    ]
+  },
+  "vram_peak_mib": 2964
+}

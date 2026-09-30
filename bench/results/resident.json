@@ -1,0 +1,88 @@
+[
+  {
+    "brain_slots": 1,
+    "vram_mib": 3054,
+    "brain_alone": {
+      "decode_tps": 38.0,
+      "tokens": 150
+    },
+    "vision_alone_s": 3.6,
+    "vram_after_requests_mib": 3060,
+    "together_scout_t6": {
+      "brain": {
+        "decode_tps": 37.0,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 31.8,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t6_s": 1.1,
+    "together_scout_t4": {
+      "brain": {
+        "decode_tps": 36.6,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 26.9,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t4_s": 1.1,
+    "together_scout_t3": {
+      "brain": {
+        "decode_tps": 37.0,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 30.8,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t3_s": 1.0
+  },
+  {
+    "brain_slots": 2,
+    "vram_mib": 3100,
+    "brain_alone": {
+      "decode_tps": 37.2,
+      "tokens": 150
+    },
+    "vision_alone_s": 3.9,
+    "vram_after_requests_mib": 3106,
+    "together_scout_t6": {
+      "brain": {
+        "decode_tps": 36.4,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 31.1,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t6_s": 1.0,
+    "together_scout_t4": {
+      "brain": {
+        "decode_tps": 35.8,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 24.0,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t4_s": 1.0,
+    "together_scout_t3": {
+      "brain": {
+        "decode_tps": 36.4,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 29.9,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t3_s": 1.0
+  }
+]

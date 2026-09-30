@@ -1,0 +1,188 @@
+{
+  "model": "qwen3.5-4b-iq4xs",
+  "file": "Qwen3.5-4B-IQ4_XS.gguf",
+  "ctx": 8192,
+  "kv": "f16",
+  "at": "2026-09-30 09:57",
+  "load_s": 2.3,
+  "vram_loaded_mib": 2802,
+  "speed": {
+    "prefill_tps": {
+      "512": 408.4,
+      "2048": 410.0,
+      "4096": 389.9
+    },
+    "prefill_ms": {
+      "512": 1254,
+      "2048": 4995,
+      "4096": 10506
+    },
+    "decode_tps": 35.9
+  },
+  "cache": {
+    "prefix_tokens": 2500,
+    "cold_prompt_ms": 6303,
+    "warm_prompt_ms": 126,
+    "warm_tokens_processed": 4,
+    "warm_tokens_from_cache": 2499
+  },
+  "tools": {
+    "n": 60,
+    "tool_acc": 0.867,
+    "args_acc": 0.85,
+    "valid": 1.0,
+    "latency_ms_median": 986,
+    "latency_ms_p90": 1337,
+    "failures": [
+      {
+        "id": 5,
+        "prompt": "start spotify",
+        "got": "media_control",
+        "args": {
+          "action": "play"
+        }
+      },
+      {
+        "id": 7,
+        "prompt": "open outlook",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 9,
+        "prompt": "open youtube",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 10,
+        "prompt": "open whatsapp web",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 30,
+        "prompt": "switch to the previous window",
+        "got": "press_keys",
+        "args": {
+          "keys": "ctrl+tab"
+        }
+      },
+      {
+        "id": 33,
+        "prompt": "click on the first video",
+        "got": "read_screen",
+        "args": {
+          "focus": "the video"
+        }
+      },
+      {
+        "id": 43,
+        "prompt": "check my mails, anything important from the professor?",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 47,
+        "prompt": "fill the internship form that is open in firefox with my details",
+        "got": "read_screen",
+        "args": {
+          "focus": "the form"
+        }
+      },
+      {
+        "id": 51,
+        "prompt": "rename today's screenshots by their time",
+        "got": "get_datetime",
+        "args": {}
+      }
+    ]
+  },
+  "json": {
+    "n": 60,
+    "tool_acc": 0.9,
+    "args_acc": 0.883,
+    "valid": 1.0,
+    "latency_ms_median": 1434,
+    "latency_ms_p90": 2390,
+    "failures": [
+      {
+        "id": 18,
+        "prompt": "what is the time now",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 19,
+        "prompt": "which date is it today",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 24,
+        "prompt": "resume the music",
+        "got": "media_control",
+        "args": {
+          "action": "resume"
+        }
+      },
+      {
+        "id": 27,
+        "prompt": "mute the sound",
+        "got": "media_control",
+        "args": {
+          "action": "mute"
+        }
+      },
+      {
+        "id": 31,
+        "prompt": "type hello everyone in the chat box",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 33,
+        "prompt": "click on the first video",
+        "got": "read_screen",
+        "args": {
+          "focus": "video player"
+        }
+      },
+      {
+        "id": 52,
+        "prompt": "turn on dark mode",
+        "got": "none",
+        "args": {}
+      }
+    ]
+  },
+  "vram_peak_mib": 2812,
+  "vision": {
+    "cpu, 1024 img tok": {
+      "latency_ms": 38662,
+      "read_ok": 1.0,
+      "output": "{\n  \"title\": \"Unsaved changes\",\n  \"message\": \"Save changes to report_final.docx before closing?\\nYour changes will be lost if you don't save them.\",\n  \"buttons\": [\n    \"Save\",\n    \"Don't Save\",\n    \"Cancel\"\n  ]\n}",
+      "vram_peak_mib": 2806
+    },
+    "cpu, 256 img tok": {
+      "latency_ms": 5958,
+      "read_ok": 1.0,
+      "output": "{\n  \"title\": \"Unsaved changes\",\n  \"message\": \"Save changes to report_final.docx before closing?\\nYour changes will be lost if you don't save them.\",\n  \"buttons\": [\n    \"Save\",\n    \"Don't Save\",\n    \"Cancel\"\n  ]\n}",
+      "vram_peak_mib": 2808
+    },
+    "gpu, 256 img tok, ctx 4k": {
+      "latency_ms": 7764,
+      "read_ok": 1.0,
+      "output": "{\n  \"title\": \"Unsaved changes\",\n  \"message\": \"Save changes to report_final.docx before closing?\\nYour changes will be lost if you don't save them.\",\n  \"buttons\": [\n    \"Save\",\n    \"Don't Save\",\n    \"Cancel\"\n  ]\n}",
+      "vram_peak_mib": 3566
+    }
+  }
+}

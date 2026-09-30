@@ -1,0 +1,43 @@
+# llama-swap config for TARS. Generated into ~/.config/tars/llama-swap.yaml by
+# scripts/gen_llama_swap.sh (it fills in @TARS_HOME@). Choices come from docs/BENCHMARKS.md.
+#
+# One OpenAI-compatible endpoint (http://127.0.0.1:8090/v1) serving:
+#   brain   Qwen3.5-4B Q4_K_M on the GPU, vision projector on CPU (256 image tokens)
+#   scout   Qwen3.5-0.8B on the CPU only, for untrusted-content reading and triage
+# Both stay resident together (group "resident"). A GUI-grounding model added
+# later would go in its own exclusive group, so loading it swaps the brain out.
+
+healthCheckTimeout: 180
+logLevel: info
+startPort: 8101
+
+macros:
+  bin: "@TARS_HOME@/opt/bin/llama-server"
+  models: "@TARS_HOME@/models/llm"
+
+models:
+  brain:
+    cmd: >
+      ${bin} --host 127.0.0.1 --port ${PORT}
+      -m ${models}/Qwen3.5-4B-Q4_K_M.gguf
+      --mmproj ${models}/qwen3.5-4b-mmproj/mmproj-F16.gguf --no-mmproj-offload
+      --image-max-tokens 256
+      -c 8192 -ngl 99 -np 2 -fa auto -fit off
+      --jinja --no-webui --metrics --cache-reuse 256
+    env:
+      - "CUDA_CACHE_MAXSIZE=4294967296"
+    ttl: 0
+
+  scout:
+    cmd: >
+      ${bin} --host 127.0.0.1 --port ${PORT}
+      -m ${models}/Qwen3.5-0.8B-Q4_K_M.gguf
+      --device none -ngl 0 -t 6 -c 8192 -np 1
+      --jinja --no-webui
+    ttl: 0
+
+groups:
+  resident:
+    swap: false
+    exclusive: false
+    members: [brain, scout]

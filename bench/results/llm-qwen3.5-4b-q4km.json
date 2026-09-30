@@ -1,0 +1,153 @@
+{
+  "model": "qwen3.5-4b-q4km",
+  "file": "Qwen3.5-4B-Q4_K_M.gguf",
+  "ctx": 8192,
+  "kv": "f16",
+  "at": "2026-09-30 09:53",
+  "load_s": 2.5,
+  "vram_loaded_mib": 3054,
+  "speed": {
+    "prefill_tps": {
+      "512": 458.9,
+      "2048": 463.1,
+      "4096": 440.8
+    },
+    "prefill_ms": {
+      "512": 1116,
+      "2048": 4423,
+      "4096": 9293
+    },
+    "decode_tps": 35.5
+  },
+  "cache": {
+    "prefix_tokens": 2500,
+    "cold_prompt_ms": 5830,
+    "warm_prompt_ms": 116,
+    "warm_tokens_processed": 4,
+    "warm_tokens_from_cache": 2499
+  },
+  "tools": {
+    "n": 60,
+    "tool_acc": 0.917,
+    "args_acc": 0.9,
+    "valid": 1.0,
+    "latency_ms_median": 1040,
+    "latency_ms_p90": 1485,
+    "failures": [
+      {
+        "id": 7,
+        "prompt": "open outlook",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 10,
+        "prompt": "open whatsapp web",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 30,
+        "prompt": "switch to the previous window",
+        "got": "press_keys",
+        "args": {
+          "keys": "ctrl+tab"
+        }
+      },
+      {
+        "id": 47,
+        "prompt": "fill the internship form that is open in firefox with my details",
+        "got": "read_screen",
+        "args": {
+          "focus": "the form"
+        }
+      },
+      {
+        "id": 48,
+        "prompt": "my python script is crashing with an import error, fix it",
+        "got": "run_command",
+        "args": {
+          "command": "python -c \"import sys; print(sys.path)\""
+        }
+      },
+      {
+        "id": 51,
+        "prompt": "rename today's screenshots by their time",
+        "got": "get_datetime",
+        "args": {}
+      }
+    ]
+  },
+  "json": {
+    "n": 60,
+    "tool_acc": 0.917,
+    "args_acc": 0.9,
+    "valid": 1.0,
+    "latency_ms_median": 1245,
+    "latency_ms_p90": 2009,
+    "failures": [
+      {
+        "id": 18,
+        "prompt": "what is the time now",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 19,
+        "prompt": "which date is it today",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 24,
+        "prompt": "resume the music",
+        "got": "media_control",
+        "args": {
+          "action": "resume"
+        }
+      },
+      {
+        "id": 27,
+        "prompt": "mute the sound",
+        "got": "media_control",
+        "args": {
+          "action": "mute"
+        }
+      },
+      {
+        "id": 31,
+        "prompt": "type hello everyone in the chat box",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 33,
+        "prompt": "click on the first video",
+        "got": "none",
+        "args": {}
+      }
+    ]
+  },
+  "vram_peak_mib": 3064,
+  "vision": {
+    "cpu, 1024 img tok": {
+      "latency_ms": 37870,
+      "read_ok": 1.0,
+      "output": "{\n  \"title\": \"Unsaved changes\",\n  \"message\": \"Save changes to report_final.docx before closing?\\nYour changes will be lost if you don't save them.\",\n  \"buttons\": [\n    \"Save\",\n    \"Don't Save\",\n    \"Cancel\"\n  ]\n}",
+      "vram_peak_mib": 3058
+    },
+    "cpu, 256 img tok": {
+      "latency_ms": 6430,
+      "read_ok": 1.0,
+      "output": "{\n  \"title\": \"Unsaved changes\",\n  \"message\": \"Save changes to report_final.docx before closing?\\nYour changes will be lost if you don't save them.\",\n  \"buttons\": [\n    \"Save\",\n    \"Don't Save\",\n    \"Cancel\"\n  ]\n}",
+      "vram_peak_mib": 3060
+    },
+    "gpu, 256 img tok, ctx 4k": {
+      "error": "Server disconnected without sending a response."
+    }
+  }
+}

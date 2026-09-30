@@ -1,18 +1,8 @@
 name: CI
 
-# Runs static checks only — NOT the voice/LLM pipeline itself.
-# This project requires a GPU, microphone, and locally-running Ollama
-# models, none of which are available on GitHub-hosted runners. This
-# workflow validates code health (syntax, lint, formatting, types,
-# dependency resolution) rather than pretending to exercise the actual
-# runtime.
-#
-# IMPORTANT: tool versions below are pinned to match pyproject.toml's
-# [project.optional-dependencies].dev exactly. If you bump a version in
-# pyproject.toml, update it here too — an unpinned `pip install black`
-# previously caused CI to silently use a newer black release than the
-# one developers run locally, producing "passes locally, fails in CI"
-# false failures.
+# Static checks and unit tests only. The runtime needs a GPU, a microphone and
+# local models, none of which exist on GitHub-hosted runners.
+# Tool versions come from pyproject.toml [project.optional-dependencies].dev.
 
 on:
   push:
@@ -21,60 +11,41 @@ on:
     branches: [main]
 
 jobs:
-  static-checks:
+  tars:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
-      - name: Install project with dev tooling
+      - name: Install TARS with dev tooling
         run: |
           python -m pip install --upgrade pip
-          # Installs ruff/black/mypy at the EXACT versions pinned in
-          # pyproject.toml's [project.optional-dependencies].dev — this
-          # is the single source of truth, matching what you run locally.
           pip install -e ".[dev]"
+      - name: Lint (ruff)
+        run: ruff check . --output-format=github
+      - name: Formatting (black)
+        run: black --check .
+      - name: Types (mypy)
+        run: mypy tars bench tests
+      - name: Unit tests
+        run: pytest tests
 
-      - name: Validate Python syntax (all files compile)
-        run: |
-          python -m compileall -q core/ flash_copilot.py
-
-      - name: Lint with ruff
-        run: |
-          ruff check . --output-format=github
-
-      - name: Check code formatting with black
-        run: |
-          black --check .
-
-      - name: Type check with mypy
-        run: |
-          mypy . --ignore-missing-imports
-
-      - name: Verify requirements.txt resolves
-        run: |
-          pip install --dry-run -r requirements.txt
-
-  dependency-check:
+  legacy:
+    # The v1 prototype in legacy/ is kept as a baseline until TARS replaces it.
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
-      - name: Run dependency audit
+      - name: Install test deps
         run: |
-          pip install pip-audit
-          pip install -r requirements.txt
-          pip-audit --skip-editable || echo "Advisory found — review above, not blocking build"
+          python -m pip install --upgrade pip
+          pip install PyQt6==6.6.1 pytest==8.3.4 psutil==5.9.6 requests==2.31.0
+      - name: Compile
+        run: python -m compileall -q legacy
+      - name: Unit tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: pytest legacy/tests

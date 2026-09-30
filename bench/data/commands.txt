@@ -1,0 +1,100 @@
+open vs code
+open firefox and go to outlook
+check my mails
+is there any new mail from the professor
+reply to Rahul's latest mail saying I will send the report by Friday
+make the reply a bit more formal
+okay send it
+read the latest mail from Priya
+summarise my unread emails
+open whatsapp web
+what is the time now
+what is today's date
+set a timer for 10 minutes
+remind me in half an hour to call mom
+pause the song
+play the next track
+increase the volume a little bit
+set volume to 40 percent
+mute the sound
+what is on my screen right now
+read this error for me
+why is the build failing in the terminal
+fix the import error in my python script
+run git status in my project
+run pytest and tell me what failed
+open a new terminal
+close this tab
+open a new tab
+switch to the previous window
+how much disk space is left
+my laptop is hanging, what is eating the RAM
+what is the GPU temperature
+how is my battery
+check if ollama is running
+which python version is installed
+search for python asyncio tutorial
+find the cheapest flight from Hyderabad to Delhi next Friday
+compare the top three budget laptop cooling pads in India
+what is the weather in Hyderabad today
+is it going to rain in Gachibowli this evening
+open youtube and play some lofi music
+play arijit singh songs on youtube
+humanize this paragraph on ai humanize
+fill the internship form with my details
+open my resume pdf from downloads
+move all the pdfs I downloaded today into a folder called sem5
+rename today's screenshots by their time
+turn on dark mode
+connect to the hostel wifi
+turn on bluetooth
+take a screenshot of this window
+copy this error and search it on google
+open the llama dot cpp github page
+show me the CUDA version
+how much VRAM is free
+start the TARS benchmark
+tell Ananya on whatsapp that I am running ten minutes late
+what did Srinivas sir say in his last mail
+schedule a reminder for the DSA assignment tomorrow at 9 am
+open google calendar
+what meetings do I have today
+join the next meeting
+explain recursion in one line
+what is the difference between a process and a thread
+tell me a short joke
+translate good morning to hindi
+what is your name
+humor setting 60 percent
+stop
+wait
+cancel that
+no, I said Outlook, not outlet
+do one thing, open the downloads folder
+kindly close all the chrome windows
+open the quickref cheat sheet for python
+open the machine learning lecture notes
+what is the deadline for the OS project
+go to leetcode and open today's daily problem
+search stack overflow for this error
+open the jupyter notebook in my project folder
+restart the audio service
+how long has the laptop been on
+kill the process that is using most CPU
+lower the screen brightness
+open settings
+open the calculator
+what is 18 percent of 2450
+convert 100 dollars to rupees
+book a cab to Hitech City
+what is the train status of the Godavari express
+order my usual from swiggy
+open spotify and play my liked songs
+read the first result aloud
+scroll down
+go back
+click the submit button
+type hello everyone in the chat box
+thanks, that's all
+goodnight TARS
+open the terminal and run nvidia smi

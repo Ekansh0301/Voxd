@@ -1,0 +1,164 @@
+# TARS site registry — which websites you use, for what, and how much TARS may do there.
+#
+# access:
+#   full      read the page and act (click, type, fill); send/submit/post still need your OK
+#   navigate  open, read, click links and menus; never types into fields or submits
+#   open_only open or focus the site, nothing else (e.g. your own practice sessions)
+#   blocked   never open, read, screenshot or act on it; tabs on it are skipped in screen snapshots
+#
+# Rules match on host (and optional path prefix). The most specific rule wins.
+# Spoken aliases feed the fast-path router and STT hotwords.
+
+sites:
+  outlook:
+    url: https://outlook.office365.com/mail/
+    match: [outlook.office365.com, outlook.office.com, outlook.live.com]
+    aliases: [outlook, mail, email, inbox, college mail]
+    category: mail
+    purpose: College Microsoft 365 mail. Read, triage, draft replies in the compose box.
+    access: full
+    notes: Sending is always a Tier-3 action that waits for your approval.
+
+  github:
+    url: https://github.com/
+    match: [github.com]
+    aliases: [github, git hub]
+    category: dev
+    purpose: Repos, issues, pull requests, CI status.
+    access: full
+    notes: Pushing, merging, commenting or creating anything is Tier 3.
+
+  youtube:
+    url: https://www.youtube.com/
+    match: [youtube.com, youtu.be]
+    aliases: [youtube, you tube, yt]
+    category: media
+    purpose: Search and play videos and music.
+    access: full
+
+  chatgpt:
+    url: https://chatgpt.com/
+    match: [chatgpt.com, chat.openai.com]
+    aliases: [chatgpt, chat gpt, gpt]
+    category: ai
+    purpose: AI chat. Also a web-AI escalation route when no API is configured.
+    access: full
+    web_ai: true
+
+  gemini:
+    url: https://gemini.google.com/app
+    match: [gemini.google.com]
+    aliases: [gemini]
+    category: ai
+    purpose: AI chat. Web-AI escalation route.
+    access: full
+    web_ai: true
+
+  aistudio:
+    url: https://aistudio.google.com/prompts/new_chat
+    match: [aistudio.google.com]
+    aliases: [ai studio, google ai studio]
+    category: ai
+    purpose: Gemini playground. Also where a free Gemini API key comes from.
+    access: full
+    web_ai: true
+
+  claude:
+    url: https://claude.ai/new
+    match: [claude.ai]
+    aliases: [claude]
+    category: ai
+    purpose: AI chat. Web-AI escalation route.
+    access: full
+    web_ai: true
+
+  aihumanize:
+    url: https://aihumanize.io/
+    match: [aihumanize.io]
+    aliases: [ai humanize, humanize, humanizer]
+    category: writing
+    purpose: Rewrite text to read more naturally before submitting.
+    access: full
+    limits:
+      words_per_conversion: 200
+    notes: >
+      TARS splits longer text into chunks of at most ~190 words at sentence boundaries,
+      converts them one after another, and joins the results for you to review.
+      The site sits behind a Cloudflare check; if one appears, TARS hands it to you.
+
+  cheatsheet:
+    url: https://quickref.me/
+    match: [quickref.me]
+    aliases: [cheatsheet, cheat sheet, quickref, quick ref]
+    category: reference
+    purpose: Quick syntax references.
+    access: navigate
+
+  leetcode:
+    url: https://leetcode.com/explore/
+    match: [leetcode.com]
+    aliases: [leetcode, leet code]
+    category: practice
+    purpose: Coding practice. TARS can open problems; solving and submitting is yours.
+    access: navigate
+
+  monkeytype:
+    url: https://monkeytype.com/
+    match: [monkeytype.com]
+    aliases: [monkeytype, monkey type, typing test]
+    category: practice
+    purpose: Typing practice (your own sessions).
+    access: open_only
+
+  keybr:
+    url: https://www.keybr.com/
+    match: [keybr.com]
+    aliases: [practice, typing practice, keybr, key br]
+    category: practice
+    purpose: Keyboard typing practice (your own sessions).
+    access: open_only
+
+  whatsapp:
+    url: https://web.whatsapp.com/
+    match: [web.whatsapp.com]
+    aliases: [whatsapp, whats app]
+    category: messaging
+    purpose: Messages. Replying through TARS is out of scope for now.
+    access: open_only
+
+  linkedin:
+    url: https://www.linkedin.com/
+    match: [linkedin.com]
+    aliases: [linkedin, linked in]
+    category: social
+    purpose: Professional network.
+    access: navigate
+    notes: Posting, messaging, connecting or applying would be Tier 3 if access is raised.
+
+  # ── College sites: never accessed by TARS ──────────────────────────────────
+  moodle:
+    url: https://courses.iiit.ac.in/my/
+    match: [courses.iiit.ac.in]
+    aliases: [moodle, courses]
+    category: college
+    purpose: College course site. You asked TARS never to access it.
+    access: blocked
+
+  ims:
+    url: http://ims.iiit.ac.in/
+    match: [ims.iiit.ac.in]
+    aliases: [ims]
+    category: college
+    purpose: College IMS. You asked TARS never to access it.
+    access: blocked
+
+  portals:
+    url: https://portals.iiit.ac.in/
+    match: [portals.iiit.ac.in]
+    aliases: [portals, college portal]
+    category: college
+    purpose: College portals. Blocked until you confirm otherwise.
+    access: blocked
+
+# Anything not listed: navigate by default, full access only per task when you ask.
+default_access: navigate

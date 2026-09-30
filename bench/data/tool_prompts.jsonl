@@ -1,0 +1,60 @@
+{"id": 1, "prompt": "open vs code", "tool": "open_app", "args": {"name": ["code"]}}
+{"id": 2, "prompt": "kindly open the calculator", "tool": "open_app", "args": {"name": ["calc"]}}
+{"id": 3, "prompt": "launch firefox", "tool": ["open_app", "open_url"], "args": {}}
+{"id": 4, "prompt": "open a terminal for me", "tool": "open_app", "args": {"name": ["terminal"]}}
+{"id": 5, "prompt": "start spotify", "tool": "open_app", "args": {"name": ["spotify"]}}
+{"id": 6, "prompt": "open the files app", "tool": "open_app", "args": {"name": ["nautilus", "files", "file"]}}
+{"id": 7, "prompt": "open outlook", "tool": "open_url", "args": {"url": ["outlook"]}}
+{"id": 8, "prompt": "go to github dot com", "tool": "open_url", "args": {"url": ["github.com"]}}
+{"id": 9, "prompt": "open youtube", "tool": "open_url", "args": {"url": ["youtube"]}}
+{"id": 10, "prompt": "open whatsapp web", "tool": "open_url", "args": {"url": ["whatsapp"]}}
+{"id": 11, "prompt": "search for python asyncio tutorial", "tool": ["web_search", "open_url"], "args": {}}
+{"id": 12, "prompt": "google what is the capital of mongolia", "tool": ["web_search", "none"], "args": {}}
+{"id": 13, "prompt": "look up the latest llama.cpp release notes", "tool": ["web_search", "open_url", "delegate"], "args": {}}
+{"id": 14, "prompt": "how much disk space is left", "tool": ["get_system_info", "run_command"], "args": {}}
+{"id": 15, "prompt": "my laptop is hanging, what is eating the RAM", "tool": ["get_system_info", "run_command"], "args": {}}
+{"id": 16, "prompt": "what is the gpu temperature right now", "tool": ["get_system_info", "run_command"], "args": {}}
+{"id": 17, "prompt": "how is my battery", "tool": ["get_system_info", "run_command"], "args": {}}
+{"id": 18, "prompt": "what is the time now", "tool": "get_datetime", "args": {}}
+{"id": 19, "prompt": "which date is it today", "tool": "get_datetime", "args": {}}
+{"id": 20, "prompt": "put a 10 minute timer for maggi", "tool": "set_timer", "args": {"minutes": ["10"]}}
+{"id": 21, "prompt": "remind me in half an hour to call mom", "tool": "set_timer", "args": {"minutes": ["30"]}}
+{"id": 22, "prompt": "pause the song", "tool": "media_control", "args": {"action": ["pause", "toggle"]}}
+{"id": 23, "prompt": "do one thing, play the next track", "tool": "media_control", "args": {"action": ["next"]}}
+{"id": 24, "prompt": "resume the music", "tool": "media_control", "args": {"action": ["play", "toggle"]}}
+{"id": 25, "prompt": "increase volume little bit", "tool": "set_volume", "args": {}}
+{"id": 26, "prompt": "set volume to 40 percent", "tool": "set_volume", "args": {"level": ["40"]}}
+{"id": 27, "prompt": "mute the sound", "tool": "set_volume", "args": {}}
+{"id": 28, "prompt": "close this tab", "tool": "press_keys", "args": {"keys": ["ctrl+w"]}}
+{"id": 29, "prompt": "open a new tab", "tool": "press_keys", "args": {"keys": ["ctrl+t"]}}
+{"id": 30, "prompt": "switch to the previous window", "tool": "press_keys", "args": {"keys": ["alt+tab"]}}
+{"id": 31, "prompt": "type hello everyone in the chat box", "tool": "type_text", "args": {"text": ["hello everyone"]}}
+{"id": 32, "prompt": "click the submit button", "tool": "click_element", "args": {"target": ["submit"]}}
+{"id": 33, "prompt": "click on the first video", "tool": "click_element", "args": {"target": ["first", "video"]}}
+{"id": 34, "prompt": "what is on my screen right now", "tool": "read_screen", "args": {}}
+{"id": 35, "prompt": "read this error for me", "tool": "read_screen", "args": {}}
+{"id": 36, "prompt": "what does this dialog say", "tool": "read_screen", "args": {}}
+{"id": 37, "prompt": "show me what's inside my Downloads folder", "tool": ["read_file", "run_command"], "args": {}}
+{"id": 38, "prompt": "read the file notes.txt on my desktop", "tool": "read_file", "args": {"path": ["notes.txt"]}}
+{"id": 39, "prompt": "run git status in my project", "tool": "run_command", "args": {"command": ["git status"]}}
+{"id": 40, "prompt": "check if ollama is running", "tool": ["run_command", "get_system_info"], "args": {}}
+{"id": 41, "prompt": "which python version is installed", "tool": "run_command", "args": {"command": ["python"]}}
+{"id": 42, "prompt": "reply to Rahul's latest mail saying I will send the report by Friday", "tool": "delegate", "args": {"agent": ["comms"]}}
+{"id": 43, "prompt": "check my mails, anything important from the professor?", "tool": "delegate", "args": {"agent": ["comms"]}}
+{"id": 44, "prompt": "summarise the unread emails in outlook", "tool": "delegate", "args": {"agent": ["comms"]}}
+{"id": 45, "prompt": "find the cheapest flight from Hyderabad to Delhi next Friday", "tool": ["delegate", "web_search"], "args": {}}
+{"id": 46, "prompt": "compare the top three budget laptop cooling pads available in India", "tool": ["delegate", "web_search"], "args": {}}
+{"id": 47, "prompt": "fill the internship form that is open in firefox with my details", "tool": "delegate", "args": {"agent": ["web"]}}
+{"id": 48, "prompt": "my python script is crashing with an import error, fix it", "tool": ["delegate", "read_screen"], "args": {}}
+{"id": 49, "prompt": "why is the build failing in the terminal", "tool": ["read_screen", "delegate"], "args": {}}
+{"id": 50, "prompt": "move all the pdfs I downloaded today into a folder called sem5", "tool": ["delegate", "run_command"], "args": {}}
+{"id": 51, "prompt": "rename today's screenshots by their time", "tool": ["delegate", "run_command"], "args": {}}
+{"id": 52, "prompt": "turn on dark mode", "tool": ["delegate", "run_command"], "args": {}}
+{"id": 53, "prompt": "download the latest release zip from the llama.cpp github page", "tool": ["delegate", "open_url"], "args": {}}
+{"id": 54, "prompt": "hi, how are you", "tool": "none", "args": {}}
+{"id": 55, "prompt": "explain recursion in one line", "tool": "none", "args": {}}
+{"id": 56, "prompt": "tell me a short joke", "tool": "none", "args": {}}
+{"id": 57, "prompt": "what is your name", "tool": "none", "args": {}}
+{"id": 58, "prompt": "thanks, that's all", "tool": "none", "args": {}}
+{"id": 59, "prompt": "what's the difference between a process and a thread", "tool": "none", "args": {}}
+{"id": 60, "prompt": "translate 'good morning' to hindi", "tool": "none", "args": {}}

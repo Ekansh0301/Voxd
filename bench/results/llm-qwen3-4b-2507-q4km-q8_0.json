@@ -1,0 +1,208 @@
+{
+  "model": "qwen3-4b-2507-q4km",
+  "file": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+  "ctx": 8192,
+  "kv": "q8_0",
+  "at": "2026-09-30 10:07",
+  "load_s": 8.3,
+  "vram_loaded_mib": 3140,
+  "speed": {
+    "prefill_tps": {
+      "512": 450.8,
+      "2048": 374.6,
+      "4096": 310.6
+    },
+    "prefill_ms": {
+      "512": 1136,
+      "2048": 5467,
+      "4096": 13189
+    },
+    "decode_tps": 36.1
+  },
+  "cache": {
+    "prefix_tokens": 2500,
+    "cold_prompt_ms": 7138,
+    "warm_prompt_ms": 40,
+    "warm_tokens_processed": 2,
+    "warm_tokens_from_cache": 2501
+  },
+  "tools": {
+    "n": 60,
+    "tool_acc": 0.767,
+    "args_acc": 0.75,
+    "valid": 1.0,
+    "latency_ms_median": 822,
+    "latency_ms_p90": 1756,
+    "failures": [
+      {
+        "id": 1,
+        "prompt": "open vs code",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 5,
+        "prompt": "start spotify",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 7,
+        "prompt": "open outlook",
+        "got": "open_app",
+        "args": {
+          "name": "outlook"
+        }
+      },
+      {
+        "id": 9,
+        "prompt": "open youtube",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 10,
+        "prompt": "open whatsapp web",
+        "got": "open_app",
+        "args": {
+          "name": "whatsapp"
+        }
+      },
+      {
+        "id": 18,
+        "prompt": "what is the time now",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 28,
+        "prompt": "close this tab",
+        "got": "read_screen",
+        "args": {}
+      },
+      {
+        "id": 30,
+        "prompt": "switch to the previous window",
+        "got": "press_keys",
+        "args": {
+          "keys": "ctrl+prev"
+        }
+      },
+      {
+        "id": 31,
+        "prompt": "type hello everyone in the chat box",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 32,
+        "prompt": "click the submit button",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 33,
+        "prompt": "click on the first video",
+        "got": "read_screen",
+        "args": {}
+      },
+      {
+        "id": 35,
+        "prompt": "read this error for me",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 36,
+        "prompt": "what does this dialog say",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 48,
+        "prompt": "my python script is crashing with an import error, fix it",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 52,
+        "prompt": "turn on dark mode",
+        "got": "none",
+        "args": {}
+      }
+    ]
+  },
+  "json": {
+    "n": 60,
+    "tool_acc": 0.917,
+    "args_acc": 0.867,
+    "valid": 1.0,
+    "latency_ms_median": 1049,
+    "latency_ms_p90": 1573,
+    "failures": [
+      {
+        "id": 7,
+        "prompt": "open outlook",
+        "got": "open_app",
+        "args": {
+          "name": "Outlook"
+        }
+      },
+      {
+        "id": 9,
+        "prompt": "open youtube",
+        "got": "open_app",
+        "args": {
+          "name": "YouTube"
+        }
+      },
+      {
+        "id": 10,
+        "prompt": "open whatsapp web",
+        "got": "open_app",
+        "args": {
+          "name": "WhatsApp Web"
+        }
+      },
+      {
+        "id": 24,
+        "prompt": "resume the music",
+        "got": "media_control",
+        "args": {
+          "action": "resume"
+        }
+      },
+      {
+        "id": 28,
+        "prompt": "close this tab",
+        "got": "press_keys",
+        "args": {
+          "keys": "w"
+        }
+      },
+      {
+        "id": 30,
+        "prompt": "switch to the previous window",
+        "got": "press_keys",
+        "args": {
+          "keys": "ctrl+prev"
+        }
+      },
+      {
+        "id": 31,
+        "prompt": "type hello everyone in the chat box",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 52,
+        "prompt": "turn on dark mode",
+        "got": "none",
+        "args": {}
+      }
+    ]
+  },
+  "vram_peak_mib": 3144
+}

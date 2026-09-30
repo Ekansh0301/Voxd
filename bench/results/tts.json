@@ -1,0 +1,74 @@
+[
+  {
+    "engine": "piper",
+    "voice": "en_US-ryan-high",
+    "short_ms": 516,
+    "long_rtf": 0.279,
+    "long_audio_s": 11.2,
+    "load_s": 1.4
+  },
+  {
+    "engine": "piper",
+    "voice": "en_US-lessac-high",
+    "short_ms": 661,
+    "long_rtf": 0.28,
+    "long_audio_s": 12.9,
+    "load_s": 1.8
+  },
+  {
+    "engine": "piper",
+    "voice": "en_US-lessac-medium",
+    "short_ms": 193,
+    "long_rtf": 0.077,
+    "long_audio_s": 12.7,
+    "load_s": 1.5
+  },
+  {
+    "engine": "kokoro",
+    "voice": "am_michael",
+    "short_ms": 5321,
+    "long_rtf": 1.805,
+    "long_audio_s": 16.2,
+    "load_s": 0.8
+  },
+  {
+    "engine": "kokoro",
+    "voice": "am_fenrir",
+    "short_ms": 4175,
+    "long_rtf": 1.831,
+    "long_audio_s": 14.4,
+    "load_s": 0.8
+  },
+  {
+    "engine": "kokoro",
+    "voice": "bm_george",
+    "short_ms": 5013,
+    "long_rtf": 1.816,
+    "long_audio_s": 14.8,
+    "load_s": 0.8
+  },
+  {
+    "engine": "kokoro",
+    "voice": "bm_lewis",
+    "short_ms": 6341,
+    "long_rtf": 1.947,
+    "long_audio_s": 14.8,
+    "load_s": 0.8
+  },
+  {
+    "engine": "kokoro",
+    "voice": "af_heart",
+    "short_ms": 4418,
+    "long_rtf": 1.776,
+    "long_audio_s": 14.4,
+    "load_s": 0.8
+  },
+  {
+    "engine": "kokoro",
+    "voice": "bf_emma",
+    "short_ms": 4765,
+    "long_rtf": 1.805,
+    "long_audio_s": 13.3,
+    "load_s": 0.8
+  }
+]

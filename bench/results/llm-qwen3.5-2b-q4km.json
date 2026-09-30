@@ -1,0 +1,343 @@
+{
+  "model": "qwen3.5-2b-q4km",
+  "file": "Qwen3.5-2B-Q4_K_M.gguf",
+  "ctx": 8192,
+  "kv": "f16",
+  "at": "2026-09-30 10:01",
+  "load_s": 2.0,
+  "vram_loaded_mib": 1448,
+  "speed": {
+    "prefill_tps": {
+      "512": 975.9,
+      "2048": 1013.7,
+      "4096": 972.5
+    },
+    "prefill_ms": {
+      "512": 525,
+      "2048": 2020,
+      "4096": 4212
+    },
+    "decode_tps": 66.4
+  },
+  "cache": {
+    "prefix_tokens": 2500,
+    "cold_prompt_ms": 2565,
+    "warm_prompt_ms": 51,
+    "warm_tokens_processed": 4,
+    "warm_tokens_from_cache": 2499
+  },
+  "tools": {
+    "n": 60,
+    "tool_acc": 0.717,
+    "args_acc": 0.683,
+    "valid": 1.0,
+    "latency_ms_median": 534,
+    "latency_ms_p90": 935,
+    "failures": [
+      {
+        "id": 2,
+        "prompt": "kindly open the calculator",
+        "got": "open_app",
+        "args": {
+          "name": "code"
+        }
+      },
+      {
+        "id": 4,
+        "prompt": "open a terminal for me",
+        "got": "run_command",
+        "args": {
+          "command": "bash -c \"apt-get update && apt-get install -y vim\""
+        }
+      },
+      {
+        "id": 5,
+        "prompt": "start spotify",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 7,
+        "prompt": "open outlook",
+        "got": "open_app",
+        "args": {
+          "name": "outlook"
+        }
+      },
+      {
+        "id": 24,
+        "prompt": "resume the music",
+        "got": "media_control",
+        "args": {
+          "action": "pause"
+        }
+      },
+      {
+        "id": 27,
+        "prompt": "mute the sound",
+        "got": "media_control",
+        "args": {
+          "action": "toggle"
+        }
+      },
+      {
+        "id": 29,
+        "prompt": "open a new tab",
+        "got": "open_url",
+        "args": {
+          "url": "https://www.google.com"
+        }
+      },
+      {
+        "id": 32,
+        "prompt": "click the submit button",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 33,
+        "prompt": "click on the first video",
+        "got": "open_url",
+        "args": {
+          "url": "https://www.youtube.com"
+        }
+      },
+      {
+        "id": 35,
+        "prompt": "read this error for me",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 36,
+        "prompt": "what does this dialog say",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 37,
+        "prompt": "show me what's inside my Downloads folder",
+        "got": "open_app",
+        "args": {
+          "name": "gnome-terminal"
+        }
+      },
+      {
+        "id": 41,
+        "prompt": "which python version is installed",
+        "got": "get_system_info",
+        "args": {}
+      },
+      {
+        "id": 47,
+        "prompt": "fill the internship form that is open in firefox with my details",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 48,
+        "prompt": "my python script is crashing with an import error, fix it",
+        "got": "get_system_info",
+        "args": {}
+      },
+      {
+        "id": 49,
+        "prompt": "why is the build failing in the terminal",
+        "got": "open_app",
+        "args": {
+          "name": "gnome-terminal"
+        }
+      },
+      {
+        "id": 51,
+        "prompt": "rename today's screenshots by their time",
+        "got": "get_datetime",
+        "args": {}
+      },
+      {
+        "id": 53,
+        "prompt": "download the latest release zip from the llama.cpp github page",
+        "got": "web_search",
+        "args": {
+          "query": "llama.cpp latest release zip github"
+        }
+      },
+      {
+        "id": 56,
+        "prompt": "tell me a short joke",
+        "got": "media_control",
+        "args": {
+          "action": "play"
+        }
+      }
+    ]
+  },
+  "json": {
+    "n": 60,
+    "tool_acc": 0.6,
+    "args_acc": 0.6,
+    "valid": 1.0,
+    "latency_ms_median": 739,
+    "latency_ms_p90": 1226,
+    "failures": [
+      {
+        "id": 4,
+        "prompt": "open a terminal for me",
+        "got": "run_command",
+        "args": {
+          "command": "bash -c \"sudo apt update && sudo apt install -y open-vm-tools-desktop\"",
+          "output": "sudo apt update && sudo apt install -y open-vm-tools-desktop"
+        }
+      },
+      {
+        "id": 5,
+        "prompt": "start spotify",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 7,
+        "prompt": "open outlook",
+        "got": "open_app",
+        "args": {
+          "name": "Outlook"
+        }
+      },
+      {
+        "id": 10,
+        "prompt": "open whatsapp web",
+        "got": "open_app",
+        "args": {
+          "name": "WhatsApp Web"
+        }
+      },
+      {
+        "id": 15,
+        "prompt": "my laptop is hanging, what is eating the RAM",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 18,
+        "prompt": "what is the time now",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 19,
+        "prompt": "which date is it today",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 23,
+        "prompt": "do one thing, play the next track",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 24,
+        "prompt": "resume the music",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 28,
+        "prompt": "close this tab",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 29,
+        "prompt": "open a new tab",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 30,
+        "prompt": "switch to the previous window",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 31,
+        "prompt": "type hello everyone in the chat box",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 33,
+        "prompt": "click on the first video",
+        "got": "open_url",
+        "args": {
+          "url": "https://www.youtube.com"
+        }
+      },
+      {
+        "id": 36,
+        "prompt": "what does this dialog say",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 40,
+        "prompt": "check if ollama is running",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 41,
+        "prompt": "which python version is installed",
+        "got": "get_system_info",
+        "args": {}
+      },
+      {
+        "id": 42,
+        "prompt": "reply to Rahul's latest mail saying I will send the report by Friday",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 44,
+        "prompt": "summarise the unread emails in outlook",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 46,
+        "prompt": "compare the top three budget laptop cooling pads available in India",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 47,
+        "prompt": "fill the internship form that is open in firefox with my details",
+        "got": "open_app",
+        "args": {
+          "name": "Outlook"
+        }
+      },
+      {
+        "id": 49,
+        "prompt": "why is the build failing in the terminal",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 51,
+        "prompt": "rename today's screenshots by their time",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 52,
+        "prompt": "turn on dark mode",
+        "got": "none",
+        "args": {}
+      }
+    ]
+  },
+  "vram_peak_mib": 1462
+}

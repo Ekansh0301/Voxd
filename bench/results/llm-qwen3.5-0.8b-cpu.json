@@ -1,0 +1,362 @@
+{
+  "model": "qwen3.5-0.8b-cpu",
+  "file": "Qwen3.5-0.8B-Q4_K_M.gguf",
+  "ctx": 8192,
+  "kv": "f16",
+  "at": "2026-09-30 20:58",
+  "load_s": 1.0,
+  "vram_loaded_mib": 0,
+  "speed": {
+    "prefill_tps": {
+      "512": 252.2,
+      "2048": 331.6,
+      "4096": 307.2
+    },
+    "prefill_ms": {
+      "512": 2030,
+      "2048": 6177,
+      "4096": 13335
+    },
+    "decode_tps": 31.1
+  },
+  "cache": {
+    "prefix_tokens": 2500,
+    "cold_prompt_ms": 7259,
+    "warm_prompt_ms": 48,
+    "warm_tokens_processed": 4,
+    "warm_tokens_from_cache": 2499
+  },
+  "tools": {
+    "n": 60,
+    "tool_acc": 0.783,
+    "args_acc": 0.733,
+    "valid": 1.0,
+    "latency_ms_median": 1070,
+    "latency_ms_p90": 1628,
+    "failures": [
+      {
+        "id": 5,
+        "prompt": "start spotify",
+        "got": "media_control",
+        "args": {
+          "action": "play"
+        }
+      },
+      {
+        "id": 7,
+        "prompt": "open outlook",
+        "got": "open_app",
+        "args": {
+          "name": "outlook"
+        }
+      },
+      {
+        "id": 10,
+        "prompt": "open whatsapp web",
+        "got": "open_url",
+        "args": {
+          "url": "https://wa.me/"
+        }
+      },
+      {
+        "id": 21,
+        "prompt": "remind me in half an hour to call mom",
+        "got": "type_text",
+        "args": {
+          "text": "I'll remind you in half an hour to call mom."
+        }
+      },
+      {
+        "id": 28,
+        "prompt": "close this tab",
+        "got": "click_element",
+        "args": {
+          "target": "the close button on the tab"
+        }
+      },
+      {
+        "id": 29,
+        "prompt": "open a new tab",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 30,
+        "prompt": "switch to the previous window",
+        "got": "press_keys",
+        "args": {
+          "keys": "ctrl+w"
+        }
+      },
+      {
+        "id": 41,
+        "prompt": "which python version is installed",
+        "got": "get_system_info",
+        "args": {}
+      },
+      {
+        "id": 42,
+        "prompt": "reply to Rahul's latest mail saying I will send the report by Friday",
+        "got": "delegate",
+        "args": {
+          "agent": "coder",
+          "goal": "Write a reply email to Rahul's mail saying I will send the report by Friday."
+        }
+      },
+      {
+        "id": 47,
+        "prompt": "fill the internship form that is open in firefox with my details",
+        "got": "click_element",
+        "args": {
+          "target": "the form in the Firefox browser"
+        }
+      },
+      {
+        "id": 48,
+        "prompt": "my python script is crashing with an import error, fix it",
+        "got": "run_command",
+        "args": {
+          "command": "cd /home/user && python -m my_script --help"
+        }
+      },
+      {
+        "id": 52,
+        "prompt": "turn on dark mode",
+        "got": "media_control",
+        "args": {
+          "action": "toggle"
+        }
+      },
+      {
+        "id": 53,
+        "prompt": "download the latest release zip from the llama.cpp github page",
+        "got": "web_search",
+        "args": {
+          "query": "llama.cpp github latest release zip download"
+        }
+      },
+      {
+        "id": 56,
+        "prompt": "tell me a short joke",
+        "got": "type_text",
+        "args": {
+          "text": "Why did the computer become a friend? Because it needed a friend to help with its coding."
+        }
+      },
+      {
+        "id": 58,
+        "prompt": "thanks, that's all",
+        "got": "run_command",
+        "args": {
+          "command": "echo \"Hello! How can I help you today?\""
+        }
+      },
+      {
+        "id": 60,
+        "prompt": "translate 'good morning' to hindi",
+        "got": "type_text",
+        "args": {
+          "text": "good morning"
+        }
+      }
+    ]
+  },
+  "json": {
+    "n": 60,
+    "tool_acc": 0.617,
+    "args_acc": 0.583,
+    "valid": 1.0,
+    "latency_ms_median": 2212,
+    "latency_ms_p90": 3600,
+    "failures": [
+      {
+        "id": 5,
+        "prompt": "start spotify",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 7,
+        "prompt": "open outlook",
+        "got": "open_app",
+        "args": {
+          "name": "Outlook"
+        }
+      },
+      {
+        "id": 10,
+        "prompt": "open whatsapp web",
+        "got": "open_app",
+        "args": {
+          "name": "whatsapp"
+        }
+      },
+      {
+        "id": 21,
+        "prompt": "remind me in half an hour to call mom",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 23,
+        "prompt": "do one thing, play the next track",
+        "got": "media_control",
+        "args": {
+          "action": "play",
+          "target": "track",
+          "volume": 0
+        }
+      },
+      {
+        "id": 25,
+        "prompt": "increase volume little bit",
+        "got": "media_control",
+        "args": {
+          "action": "set_volume",
+          "level": 0.5,
+          "change": 0.5
+        }
+      },
+      {
+        "id": 27,
+        "prompt": "mute the sound",
+        "got": "media_control",
+        "args": {
+          "action": "mute",
+          "level": 0
+        }
+      },
+      {
+        "id": 28,
+        "prompt": "close this tab",
+        "got": "click_element",
+        "args": {
+          "target": "close button"
+        }
+      },
+      {
+        "id": 29,
+        "prompt": "open a new tab",
+        "got": "open_app",
+        "args": {
+          "name": "firefox"
+        }
+      },
+      {
+        "id": 30,
+        "prompt": "switch to the previous window",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 31,
+        "prompt": "type hello everyone in the chat box",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 35,
+        "prompt": "read this error for me",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 36,
+        "prompt": "what does this dialog say",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 40,
+        "prompt": "check if ollama is running",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 41,
+        "prompt": "which python version is installed",
+        "got": "get_system_info",
+        "args": {}
+      },
+      {
+        "id": 42,
+        "prompt": "reply to Rahul's latest mail saying I will send the report by Friday",
+        "got": "delegate",
+        "args": {
+          "agent": "user",
+          "goal": "Send a report to Rahul by Friday"
+        }
+      },
+      {
+        "id": 43,
+        "prompt": "check my mails, anything important from the professor?",
+        "got": "web_search",
+        "args": {
+          "query": "check my emails professor important details"
+        }
+      },
+      {
+        "id": 44,
+        "prompt": "summarise the unread emails in outlook",
+        "got": "web_search",
+        "args": {
+          "query": "summarise unread emails Outlook"
+        }
+      },
+      {
+        "id": 47,
+        "prompt": "fill the internship form that is open in firefox with my details",
+        "got": "open_url",
+        "args": {
+          "url": "https://www.linkedin.com/in/your-username"
+        }
+      },
+      {
+        "id": 48,
+        "prompt": "my python script is crashing with an import error, fix it",
+        "got": "run_command",
+        "args": {
+          "command": "cd /home/user && python3 -c \"import sys; print(sys.path)\"",
+          "say": "I can't see your Python script file, so I can't fix it. Please provide the full path to your script or paste the error message here."
+        }
+      },
+      {
+        "id": 49,
+        "prompt": "why is the build failing in the terminal",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 50,
+        "prompt": "move all the pdfs I downloaded today into a folder called sem5",
+        "got": "open_url",
+        "args": {
+          "url": "https://sem5.pdf"
+        }
+      },
+      {
+        "id": 51,
+        "prompt": "rename today's screenshots by their time",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 52,
+        "prompt": "turn on dark mode",
+        "got": "none",
+        "args": {}
+      },
+      {
+        "id": 60,
+        "prompt": "translate 'good morning' to hindi",
+        "got": "web_search",
+        "args": {
+          "query": "translate 'good morning' to hindi"
+        }
+      }
+    ]
+  },
+  "vram_peak_mib": 0
+}

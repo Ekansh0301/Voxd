@@ -1,0 +1,86 @@
+[
+  {
+    "brain_slots": 1,
+    "vram_mib": 3054,
+    "brain_alone": {
+      "decode_tps": 5.4,
+      "tokens": 150
+    },
+    "vision_alone_s": 11.6,
+    "together_scout_t6": {
+      "brain": {
+        "decode_tps": 5.4,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 17.6,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t6_s": 6.4,
+    "together_scout_t4": {
+      "brain": {
+        "decode_tps": 5.4,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 16.2,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t4_s": 6.4,
+    "together_scout_t3": {
+      "brain": {
+        "decode_tps": 5.4,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 15.0,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t3_s": 6.4
+  },
+  {
+    "brain_slots": 2,
+    "vram_mib": 3100,
+    "brain_alone": {
+      "decode_tps": 5.4,
+      "tokens": 150
+    },
+    "vision_alone_s": 11.7,
+    "together_scout_t6": {
+      "brain": {
+        "decode_tps": 5.4,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 17.5,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t6_s": 6.4,
+    "together_scout_t4": {
+      "brain": {
+        "decode_tps": 5.4,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 16.3,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t4_s": 6.4,
+    "together_scout_t3": {
+      "brain": {
+        "decode_tps": 5.4,
+        "tokens": 150
+      },
+      "scout": {
+        "decode_tps": 14.8,
+        "tokens": 37
+      }
+    },
+    "vision_with_scout_t3_s": 6.3
+  }
+]
