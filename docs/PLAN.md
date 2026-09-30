@@ -156,7 +156,7 @@ MCP servers are child processes of the core.
 | STT | **faster-whisper `small.en` int8**, chosen by word error rate on **your Indian-English recordings** | `medium.en` int8 (more accurate on accents, about 2–3× slower on CPU), `distil-small.en`, sherpa-onnx Parakeet-TDT-0.6B | CPU |
 | VAD | Silero VAD | — | CPU |
 | Wake word | *later:* openWakeWord, custom "hey TARS" (PTT only for now) | — | CPU |
-| TTS | **Piper** for lowest latency; **Kokoro-82M ONNX** for quality | Choose per voice after an A/B listen | CPU |
+| TTS | Measured on AC: **Piper** first sentence 73 ms (lessac-medium) to 275 ms (ryan-high); **Kokoro-82M fp32** 0.7–0.9 s with RTF 0.32, and more natural. Pick by listening (`bench/results/tts/`). With Kokoro, the first chunk is cut at the first comma to keep first audio near 1.5 s | Kokoro int8 rejected: 3.5× slower than fp32 on this CPU (RTF 1.1) | CPU |
 | Embeddings | bge-small-en-v1.5 / nomic-embed ONNX | EmbeddingGemma-300M | CPU |
 
 Notes:
