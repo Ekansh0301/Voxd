@@ -682,7 +682,6 @@ class Brain:
             r"\s*Is there (?:anything|something)[^?]*\??\s*$",
             r"\s*What else[^?]*\??\s*$",
             r"\s*\(timezone:[^)]*\)\s*$",
-            r"\s*in [a-zA-Z\s]+[,.]?\s*$",  # Generic city/location cleanup
         ]
         for p in tail_pats:
             text = re.sub(p, "", text, flags=re.IGNORECASE).strip()

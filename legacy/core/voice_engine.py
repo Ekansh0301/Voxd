@@ -22,7 +22,8 @@ from typing import Optional
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
-from gpu_lock import GPU_LOCK
+
+from core.gpu_lock import GPU_LOCK
 
 log = logging.getLogger("flash.voice")
 
@@ -42,7 +43,7 @@ class VoiceEngine:
         self._stt_lock = threading.Lock()
         self._tts_lock = threading.Lock()
         self._stop_speaking = False
-        self._process: Optional[subprocess.Popen] = None  # track piper process for hard kill
+        self._piper_proc: Optional[subprocess.Popen] = None  # track piper process for hard kill
 
         # Locate piper binary
         project_dir = Path(__file__).parent.parent

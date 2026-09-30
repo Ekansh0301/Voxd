@@ -11,8 +11,9 @@ Blocks the most dangerous patterns entirely.
 import logging
 import re
 import threading
+from typing import Callable
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 log = logging.getLogger("flash.safety")
@@ -99,19 +100,40 @@ SAFE_PATTERNS = [
 ]
 
 
+# Anything that chains, pipes, substitutes or redirects can hide a second
+# command behind a "safe" prefix (e.g. `cat x; rm -rf ~`), so such commands
+# are never auto-approved.
+SHELL_META = re.compile(r"[;&|`<>]|\$\(|\n")
+
+
+class _MainThreadInvoker(QObject):
+    """Runs callables on the thread this object lives in (the Qt main thread)."""
+
+    call = pyqtSignal(object)
+
+    def __init__(self):
+        super().__init__()
+        self.call.connect(lambda fn: fn())
+
+
 class SafetyLayer:
     """
     Classifies and gates command execution.
+    Must be constructed on the Qt main thread so dialogs are shown there.
     """
+
+    def __init__(self):
+        self._invoker = _MainThreadInvoker()
 
     def needs_confirmation(self, command: str) -> bool:
         """Returns True if the command should be confirmed before running."""
         cmd = command.strip()
 
-        # Check safe list first
-        for pattern in SAFE_PATTERNS:
-            if re.match(pattern, cmd, re.IGNORECASE):
-                return False
+        # Check safe list first (only for single, plain commands)
+        if not SHELL_META.search(cmd):
+            for pattern in SAFE_PATTERNS:
+                if re.match(pattern, cmd, re.IGNORECASE):
+                    return False
 
         # Check destructive list
         for pattern in DESTRUCTIVE_PATTERNS:
@@ -190,20 +212,19 @@ class SafetyLayer:
             result[0] = choice == QMessageBox.StandardButton.Yes
             event.set()
 
-        # Schedule on Qt main thread
-        app = QApplication.instance()
-        if app:
-            (
-                app.callInMainThread(_show_dialog)
-                if hasattr(app, "callInMainThread")
-                else _show_dialog()
-            )
-        else:
-            _show_dialog()
+        self._run_on_main_thread(_show_dialog)
 
         event.wait(timeout=60)  # User has 60 seconds to respond
         log.info(f"Command {'approved' if result[0] else 'rejected'}: {command}")
         return result[0]
+
+    def _run_on_main_thread(self, fn: Callable[[], None]):
+        if QApplication.instance() is None:
+            fn()
+            return
+        # Emitting from a worker thread queues the call onto the invoker's
+        # (main) thread; emitting from the main thread calls it directly.
+        self._invoker.call.emit(fn)
 
     def get_risk_label(self, command: str) -> str:
         """Return a human-readable risk label."""

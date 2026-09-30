@@ -144,34 +144,25 @@ class DesktopControl:
         This actually plays the video — unlike open_url which just opens a page.
         """
         log.info(f"play_youtube: {query}")
-        # Try yt-dlp + mpv (best approach)
+        # mpv resolves the search itself through its yt-dlp hook, so there is no
+        # blocking URL lookup here and mpv can pick separate video/audio streams
+        # (a single-file "best[height<=720]" format often doesn't exist anymore).
         if shutil.which("yt-dlp") and shutil.which("mpv"):
             try:
-                # Get first video URL
-                result = subprocess.run(
+                subprocess.Popen(
                     [
-                        "yt-dlp",
-                        "--no-playlist",
-                        "--get-url",
-                        "--format",
-                        "best[height<=720]",
-                        f"ytsearch1:{query}",
+                        "mpv",
+                        "--really-quiet",
+                        "--ytdl-format=bv*[height<=720]+ba/b[height<=720]/b",
+                        f"ytdl://ytsearch1:{query}",
                     ],
-                    capture_output=True,
-                    text=True,
-                    timeout=15,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
                 )
-                video_url = result.stdout.strip().split("\n")[0]
-                if video_url and video_url.startswith("http"):
-                    subprocess.Popen(
-                        ["mpv", "--really-quiet", video_url],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        start_new_session=True,
-                    )
-                    return f"Playing: {query}"
+                return f"Playing: {query}"
             except Exception as e:
-                log.warning(f"yt-dlp/mpv failed: {e}")
+                log.warning(f"mpv failed: {e}")
 
         # Fallback: open YouTube search in browser
         q = query.replace(" ", "+")
@@ -367,7 +358,7 @@ class DesktopControl:
             f"?latitude={self._lat}&longitude={self._lon}"
             f"&current=temperature_2m,apparent_temperature,"
             f"relative_humidity_2m,is_day,weather_code,wind_speed_10m"
-            f"&timezone=Asia%2FKolkata&forecast_days=1"
+            f"&timezone=auto&forecast_days=1"
         )
         try:
             with urllib.request.urlopen(url, timeout=8) as r:

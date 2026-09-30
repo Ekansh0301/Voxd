@@ -642,6 +642,8 @@ class WorkerThread(QThread):
                     cmd = args
                 if not cmd:
                     return "No command specified."
+                if self.safety.is_blocked(cmd):
+                    return f"Blocked dangerous command: {cmd}"
                 needs_confirm = self.safety.needs_confirmation(cmd)
                 if needs_confirm:
                     approved = self.safety.confirm_sync(cmd)
@@ -732,19 +734,13 @@ class WorkerThread(QThread):
                 import os
 
                 full_path = os.path.expanduser(path)
+                if os.path.exists(full_path) and not self.safety.confirm_sync(
+                    f"overwrite existing file {full_path}"
+                ):
+                    return f"Cancelled: {full_path} already exists."
                 with open(full_path, "w") as f:
                     f.write(content_text)
                 return f"Created: {full_path}"
-
-            elif name == "open_url_and_type":
-                url = args.get("url", "")
-                query = args.get("query", "")
-                if url and query:
-                    return str(self.desktop.open_url_and_type(url, query))
-                elif url:
-                    self.desktop.open_url(url)
-                    return f"Opened: {url}"
-                return "Missing URL."
 
             elif name == "clipboard_get":
                 import subprocess as sp
@@ -785,41 +781,14 @@ class WorkerThread(QThread):
             elif name == "vscode_file":
                 return str(self.desktop.vscode_file())
 
-            elif name == "read_screen":
-                text = self.desktop.read_screen()
-                if len(text) > 300:
-                    return str(self.brain.synthesize("screen content", text, [text]))
-                return text  # type: ignore[no-any-return]
-
-            elif name == "type_text":
-                self.desktop.type_text(args.get("text", ""))
-                return "Typed text."
-
             elif name == "play_youtube":
                 query = args.get("query", "")
                 if query:
                     return str(self.desktop.play_youtube(query))
                 return "No query for play_youtube."
 
-            elif name == "keyboard_shortcut":
-                keys = args.get("keys", "")
-                return str(self.desktop.keyboard_shortcut(keys))
-
-            elif name == "click_play":
-                return str(self.desktop.click_play())
-
-            elif name == "vscode_file":
-                return str(self.desktop.vscode_file())
-
             elif name == "get_active_window":
                 return str(self.desktop.get_active_window())
-
-            elif name == "read_screen":
-                return str(self.desktop.read_screen())
-
-            elif name == "type_text":
-                self.desktop.type_text(args.get("text", ""))
-                return "Typed text."
 
             else:
                 return None
@@ -827,6 +796,18 @@ class WorkerThread(QThread):
         except Exception as e:
             log.error(f"Tool {name} failed: {e}")
             return f"Error executing {name}: {str(e)}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  UI BRIDGE — lets background threads (hotkey, transcription, TTS, monitor)
+#  update widgets safely. Qt widgets may only be touched on the main thread;
+#  signals emitted from other threads are queued onto it.
+# ══════════════════════════════════════════════════════════════════════════════
+class UiBridge(QObject):
+    avatar_state = pyqtSignal(str, str, str)  # state, text, subtext
+    user_message = pyqtSignal(str)
+    system_message = pyqtSignal(str)
+    tray_message = pyqtSignal(str, str, int, bool)  # title, message, ms, is_warning
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -928,6 +909,12 @@ class FlashCopilot(QObject):
         self.tray = TrayIcon(self)
         self.tray.show()
 
+        self.ui = UiBridge()
+        self.ui.avatar_state.connect(self.avatar.set_state)
+        self.ui.user_message.connect(self.chat_win.add_user_message)
+        self.ui.system_message.connect(self.chat_win.add_system_message)
+        self.ui.tray_message.connect(self._show_tray_message)
+
         # Worker thread
         self.worker = WorkerThread(self.brain, self.voice, self.desktop, self.memory, self.safety)
         self.worker.state_changed.connect(self._on_state_changed)
@@ -951,7 +938,7 @@ class FlashCopilot(QObject):
         log.info("PTT key pressed — starting recording")
         # Stop any ongoing TTS immediately
         self.voice.interrupt()  # kills TTS, waits 300ms internally
-        self.avatar.set_state(AvatarState.LISTENING, "LISTENING", "Speak now...")
+        self.ui.avatar_state.emit(AvatarState.LISTENING, "LISTENING", "Speak now...")
         self.voice.start_recording()
 
     def _on_hotkey_release(self):
@@ -960,7 +947,7 @@ class FlashCopilot(QObject):
         audio_data = self.voice.stop_recording()
 
         if audio_data is None or len(audio_data) < 1000:
-            self.avatar.set_state(AvatarState.IDLE, "FLASH", "Ready")
+            self.ui.avatar_state.emit(AvatarState.IDLE, "FLASH", "Ready")
             return
 
         # Transcribe in background
@@ -968,14 +955,12 @@ class FlashCopilot(QObject):
             text = self.voice.transcribe(audio_data)
             if text and len(text.strip()) > 2:
                 log.info(f"Transcribed: {text}")
-                self.avatar.set_state(AvatarState.THINKING, "Thinking...", text[:30])
-                self.tray.showMessage(
-                    "Flash heard you:", text, QSystemTrayIcon.MessageIcon.Information, 2000
-                )
-                self.chat_win.add_user_message(text)
+                self.ui.avatar_state.emit(AvatarState.THINKING, "Thinking...", text[:30])
+                self.ui.tray_message.emit("Flash heard you:", text, 2000, False)
+                self.ui.user_message.emit(text)
                 self.worker.enqueue(text)
             else:
-                self.avatar.set_state(AvatarState.IDLE, "FLASH", "Ready")
+                self.ui.avatar_state.emit(AvatarState.IDLE, "FLASH", "Ready")
 
         threading.Thread(target=transcribe_and_enqueue, daemon=True).start()
 
@@ -989,12 +974,20 @@ class FlashCopilot(QObject):
             # Always format before speaking — never raw data to TTS
             tts_text = _format_for_speech(text)
             if not tts_text:
-                self.avatar.set_state(AvatarState.IDLE, "FLASH", "Ready")
+                self.ui.avatar_state.emit(AvatarState.IDLE, "FLASH", "Ready")
                 return
             self.voice.speak(tts_text)
-            self.avatar.set_state(AvatarState.IDLE, "FLASH", "Ready")
+            self.ui.avatar_state.emit(AvatarState.IDLE, "FLASH", "Ready")
 
         threading.Thread(target=_do_speak, daemon=True).start()
+
+    def _show_tray_message(self, title: str, message: str, ms: int, is_warning: bool):
+        icon = (
+            QSystemTrayIcon.MessageIcon.Warning
+            if is_warning
+            else QSystemTrayIcon.MessageIcon.Information
+        )
+        self.tray.showMessage(title, message, icon, ms)
 
     def _on_notify(self, title: str, message: str):
         self.tray.showMessage(title, message, QSystemTrayIcon.MessageIcon.Information, 3000)
@@ -1009,10 +1002,10 @@ class FlashCopilot(QObject):
         self.worker.enqueue(text)
 
     def _on_proactive_alert(self, message: str):
-        """Proactive monitor alert."""
+        """Proactive monitor alert (called from the monitor thread)."""
         log.info(f"Proactive alert: {message}")
-        self.chat_win.add_system_message(f"Alert: {message}")
-        self.tray.showMessage("Flash Alert", message, QSystemTrayIcon.MessageIcon.Warning, 5000)
+        self.ui.system_message.emit(f"Alert: {message}")
+        self.ui.tray_message.emit("Flash Alert", message, 5000, True)
         threading.Thread(target=self.voice.speak, args=(message,), daemon=True).start()
 
     def toggle_text_mode(self):

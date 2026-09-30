@@ -15,7 +15,7 @@ Flash remembers:
 import logging
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 log = logging.getLogger("flash.memory")
 
@@ -32,15 +32,15 @@ class MemoryEngine:
     def __init__(self, db_path: Path):
         self.db_path = Path(db_path)
         self.db_path.mkdir(parents=True, exist_ok=True)
-        self._client = None
+        self._client: Any = None
         self._collection: Any = None
-        self._embedding_fn = None
+        self._embedding_fn: Any = None
         self._id_counter = 0
         self._ready = False
 
         self._init_db()
 
-    def _init_db(self):
+    def _init_db(self, _retry: bool = True):
         """Initialize ChromaDB with local embeddings."""
         try:
             import chromadb
@@ -59,13 +59,17 @@ class MemoryEngine:
                 )
                 log.info("Using SentenceTransformer embeddings")
             except Exception:
-                log.warning("SentenceTransformer not available, using default embeddings")
-                self._embedding_fn = None
+                # Passing None would disable embeddings entirely; use chromadb's
+                # bundled ONNX MiniLM instead (same model, no torch needed).
+                from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+
+                log.warning("SentenceTransformer not available, using ONNX MiniLM embeddings")
+                self._embedding_fn = DefaultEmbeddingFunction()
 
             # Get or create collection
             self._collection = self._client.get_or_create_collection(
                 name="flash_memory",
-                embedding_function=self._embedding_fn,
+                embedding_function=cast(Any, self._embedding_fn),
                 metadata={"hnsw:space": "cosine"},
             )
 
@@ -79,6 +83,21 @@ class MemoryEngine:
             log.warning("ChromaDB not installed. Memory disabled.")
             log.warning("Install with: pip install chromadb sentence-transformers")
         except Exception as e:
+            # A store written by a different chromadb version fails with schema
+            # errors like "no such column: collections.topic". Keep the old files
+            # (moved aside, not deleted) and start a fresh store.
+            if _retry and "no such column" in str(e):
+                backup = self.db_path.with_name(f"{self.db_path.name}.bak-{int(time.time())}")
+                log.warning(f"Memory store schema mismatch ({e}); moving it to {backup}")
+                self._client = None
+                # chromadb caches the (failed) system per path; drop it before retrying
+                from chromadb.api.client import SharedSystemClient
+
+                SharedSystemClient.clear_system_cache()
+                self.db_path.rename(backup)
+                self.db_path.mkdir(parents=True, exist_ok=True)
+                self._init_db(_retry=False)
+                return
             log.error(f"Memory init failed: {e}")
 
     def save(self, user_input: str, assistant_reply: str):

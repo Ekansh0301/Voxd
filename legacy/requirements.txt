@@ -25,9 +25,3 @@ psutil==5.9.6
 requests==2.31.0
 pynput==1.7.6
 ddgs==9.14.4
-
-# --- Optional: only needed if using the bundled PyGPT-style plugins ---
-# (plugins/plugin_piper_tts/, plugins/plugin_flash_avatar/)
-# Uncomment if you intend to run Vox's plugins inside or alongside a full
-# PyGPT installation rather than using the bundled plugin shims standalone.
-# pygpt-net==2.4.36
