@@ -2,7 +2,7 @@
 
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform: Ubuntu](https://img.shields.io/badge/platform-Ubuntu%20X11-orange.svg)](#hardware)
+[![Platform: Ubuntu 26.04](https://img.shields.io/badge/platform-Ubuntu%2026.04%20Wayland-orange.svg)](#hardware)
 [![CI](https://github.com/Ekansh0301/Voxd/actions/workflows/ci.yml/badge.svg)](https://github.com/Ekansh0301/Voxd/actions/workflows/ci.yml)
 
 A local, hands-free desktop agent for Ubuntu that runs on a laptop with a
@@ -45,7 +45,7 @@ hard tasks, and anything sent to them has personal details redacted first.
 
 Designed and measured on an HP Victus 16: i5-11400H, 16 GB RAM, GTX 1650
 Mobile with 4 GB (3714 MiB usable by CUDA), and the desktop rendered on the
-Intel iGPU (PRIME on-demand). The Phase 0 measurements are in
+Intel iGPU (PRIME on-demand), Ubuntu 26.04 LTS with GNOME 50 on Wayland. The Phase 0 measurements are in
 [docs/BENCHMARKS.md](docs/BENCHMARKS.md):
 
 | | Measured |

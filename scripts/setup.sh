@@ -31,7 +31,7 @@ fetch() { # url dest
     fi
     echo "get   $(basename "$dest")"
     touch "$dest.part"
-    curl -4 -fL --retry 5 --retry-delay 3 -C - -o "$dest" "$url"
+    curl -4 --http1.1 -fL --retry 5 --retry-delay 3 -C - -o "$dest" "$url"
     rm -f "$dest.part"
 }
 

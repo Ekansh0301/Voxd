@@ -8,7 +8,7 @@
 > - **Avatar:** Live2D 2D.
 > - **Cloud escalation:** allowed for hard and research tasks. Content may be sent with PII redacted; the provider is decided later.
 >
-> Target machine: HP Victus 16 · i5-11400H (6C/12T, AVX-512) · 16 GB RAM · GTX 1650 Mobile 4 GB · NVMe · Ubuntu on X11 · PRIME on-demand, with the desktop rendered on the Intel iGPU.
+> Target machine: HP Victus 16 · i5-11400H (6C/12T, AVX-512) · 16 GB RAM · GTX 1650 Mobile 4 GB · NVMe · **Ubuntu 26.04 LTS, GNOME 50 on Wayland** (upgraded 2026-10; X11 apps run via XWayland) · PRIME on-demand, with the desktop rendered on the Intel iGPU.
 
 ---
 
@@ -209,6 +209,7 @@ Core reply tokens ─► sentence chunker ─► TTS queue ─► playback (chun
 - **Progress narration** during long tasks: short cues like "Opening Outlook… found 3 unread from Rahul…", throttled so it doesn't chatter.
 - **Hotwords.** Contact names, app names and project names are fed to faster-whisper `hotwords`, not `initial_prompt`. v1 learned that `initial_prompt` gets hallucinated back into the transcript.
 - **Mode.** **Push-to-talk only for now.** The key release marks end of speech exactly, with no silence wait, which saves about 0.5 s per turn. Pressing PTT while TARS talks interrupts it. Wake word and follow-up listening are a later add-on.
+  - **On Wayland** the key comes from the GlobalShortcuts portal, which reports press and release. GNOME may refuse a modifier on its own (v1's Right Ctrl) as a shortcut, so the likely default is a spare non-modifier key (Pause, Insert, ScrollLock, or an F-key). If you want Right Ctrl specifically, the evdev fallback can read it, but that needs you to add yourself to the `input` group.
 - **Language: English, tuned for Indian English.**
   - Record about 100 of your real commands in Phase 0 and pick the STT model by word error rate on *your* voice, not on benchmarks.
   - Feed faster-whisper `hotwords` with Indian names, places and your vocabulary (contacts, IIIT, Hyderabad, app and project names).
@@ -218,7 +219,7 @@ Core reply tokens ─► sentence chunker ─► TTS queue ─► playback (chun
 
 ### 5.2 Avatar
 
-- **Format: Live2D (Cubism 4/5)**, rendered with the official Live2D Cubism Web SDK. It is shown in a **transparent, always-on-top, click-through Qt WebEngine window**. Rendering runs on the Intel iGPU, so it costs about 0 MB of NVIDIA VRAM and a few percent of CPU, and runs at 60 fps capped (30 fps when idle to save battery).
+- **Format: Live2D (Cubism 4/5)**, rendered with the official Live2D Cubism Web SDK. It is shown in a **transparent, always-on-top, click-through Qt WebEngine window**. On Wayland, Mutter doesn't let native clients stay on top or pick their position, so the overlay runs under **XWayland** (`QT_QPA_PLATFORM=xcb`), where both work. A small GNOME Shell extension is the fallback if that ever regresses. Rendering runs on the Intel iGPU, so it costs about 0 MB of NVIDIA VRAM and a few percent of CPU, and runs at 60 fps capped (30 fps when idle to save battery).
 - **Model: Mao (Niziiro Mao PRO)**, an official Live2D sample. It is the default in Open-LLM-VTuber and ships with an emotion map (neutral/joy/anger/sadness/surprise…), idle and tap motions, and lip-sync parameters. Browse the alternatives in the [Live2D sample collection](https://www.live2d.com/en/learn/sample/); the terms are in the [sample data terms of use](https://www.live2d.com/en/learn/sample/model-terms/). Later, buy one (nizima, Booth) or commission a custom TARS-themed character; it's a drop-in file swap. The Live2D Cubism SDK is free for individuals and small-scale use.
 - **States** (mapped to the model's motions and expressions): idle (breathing, blinking), listening (leans in), thinking (eyes up), **acting** (looks toward the window being operated, and an "agent has control" border is drawn around the screen), speaking (lip-sync), confirming (holds up a card with the action summary), error.
 - **Lip-sync.** Audio RMS drives `ParamMouthOpenY`, and a cheap vowel estimate drives `ParamMouthForm`. Later, phoneme timings from the TTS front-end.
@@ -257,7 +258,7 @@ A layered pipeline where the cheapest exact source wins:
 
 **One-time setup:**
 
-- `gsettings set org.gnome.desktop.interface toolkit-accessibility true`
+- `gsettings set org.gnome.desktop.interface toolkit-accessibility true` (currently `false` on this machine; TARS will ask before changing it)
 - `QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1`
 - Firefox launched with `--marionette --remote-debugging-port` by a TARS launcher, which replaces your Firefox shortcut. The port is localhost-only. Firefox shows its striped "remote control" address bar while it's on; that's expected.
 - VS Code `"editor.accessibilitySupport": "on"`
@@ -296,10 +297,10 @@ Semantic actions come first and raw input is the fallback:
 
 | Target | Preferred | Fallback |
 |---|---|---|
-| Native apps | AT-SPI `doAction`, `setTextContents`, `grabFocus`, selection | xdotool / python-xlib XTEST click at element bounds |
+| Native apps | AT-SPI `doAction`, `setTextContents`, `grabFocus`, selection (works the same on Wayland) | Pointer and keyboard through the **RemoteDesktop portal** (libei), at coordinates from a ScreenCast frame |
 | Browser | firefox-devtools-mcp UIDs: click, fill, select, press, navigate, evaluate | AT-SPI actions on Firefox's accessible tree, then coordinates from the vision layer |
 | Terminal | `tmux send-keys`; commands via the sandboxed `tars-shell` server | — |
-| Windows | EWMH via `wmctrl` / `xdotool` (focus, move, tile, workspace) | — |
+| Windows | A tiny TARS **GNOME Shell extension** over D-Bus (list, focus, move, tile, workspace), since Wayland has no wmctrl/EWMH | AT-SPI frames: activate an app's window |
 | Media | MPRIS D-Bus (`playerctl`) for play/pause/next on any player; `mpv ytdl://ytsearch1:…` for "play X" | — |
 | System | `nmcli`, `pactl` (volume), `brightnessctl`, `systemctl --user`, notifications | — |
 
@@ -311,9 +312,21 @@ Semantic actions come first and raw input is the fallback:
 4. **Record undo info** where possible.
 5. **Retry once differently** (semantic ↔ coordinate) before reporting failure.
 
-**Cooperative control:** XInput activity from the real user pauses the agent: "You took over — say 'continue' when ready."
+**Cooperative control:** real user input pauses the agent (detected through the extension's idle monitor / the InputCapture portal): "You took over — say 'continue' when ready."
 
-**Wayland:** later. You are on X11 today. A future Wayland path would use `ydotool` or libei plus the RemoteDesktop portal.
+**Wayland (the default since the 26.04 upgrade).** GNOME 50 has no X11 session, so every X11-era tool is replaced:
+
+| Need | X11 tool (v1) | Wayland path in TARS |
+|---|---|---|
+| Push-to-talk key held/released | pynput (sees only XWayland apps now) | **GlobalShortcuts portal** (press and release signals, key bound once in GNOME's dialog). Fallback: evdev on `/dev/input`, which needs you to join the `input` group |
+| Keyboard and mouse injection | xdotool | **RemoteDesktop portal** (libei). One consent prompt, then a restore token so it's remembered |
+| Screenshots | scrot / gnome-screenshot | **Screenshot portal** for single shots, **ScreenCast** (PipeWire) when frames and injection coordinates must match |
+| Window list, focus, move | wmctrl / xdotool | A TARS GNOME Shell extension (D-Bus), plus AT-SPI |
+| Clipboard | xclip | `wl-clipboard`, or the portal clipboard in the RemoteDesktop session |
+| Reading UI | AT-SPI | AT-SPI, unchanged. Element screen coordinates are often unavailable on Wayland, which is one more reason semantic actions come first |
+| Browser | — | firefox-devtools-mcp (WebDriver BiDi), unaffected by the display server |
+
+xdotool still works for XWayland windows (VS Code runs under XWayland by default), and TARS may use it there as a fast path.
 
 ---
 
@@ -748,8 +761,8 @@ This assumes part-time work at about 15–20 h/week. Every phase has **exit crit
 - **Exit:** a filled-in benchmark table (commit it as `docs/BENCHMARKS.md`), and the Brain, STT and TTS chosen.
 
 ### Phase 1 — Voice v2 and avatar v1 (2 weeks)
-- A separate voice process: PTT capture, Silero VAD trimming, turn manager, interrupt-on-PTT, sentence-streamed TTS, hotwords and entity correction for Indian English.
-- The Qt shell with a transparent WebEngine **Live2D** avatar (sample model), the state machine, RMS lip-sync, TARS personality sliders, and chat.
+- A separate voice process: PTT capture through the GlobalShortcuts portal (evdev fallback), Silero VAD trimming, turn manager, interrupt-on-PTT, sentence-streamed TTS, hotwords and entity correction for Indian English.
+- The Qt shell (under XWayland, for always-on-top) with a transparent WebEngine **Live2D** avatar (sample model), the state machine, RMS lip-sync, TARS personality sliders, and chat.
 - **Exit:** under 1.5 s to first audio on the fast path; STT word error rate ≤ 8% on your recorded commands; PTT interrupt stops speech in under 200 ms; no UI calls from worker threads (enforced by signals).
 
 ### Phase 2 — Agent core and MCP (3 weeks)
@@ -763,6 +776,7 @@ This assumes part-time work at about 15–20 h/week. Every phase has **exit crit
 - `tars-desktop`: AT-SPI snapshot, act, find and events; compact format; focus scoping; change diffs.
 - firefox-devtools-mcp attached to your real Firefox (plus the launcher script), the headless Playwright browser for background work, the AT-SPI fallback for Firefox, tmux terminal, and the VS Code extension.
 - Vision fallback: YOLO + OCR + Set-of-Mark, the projector path, and the grounder swap via llama-swap.
+- The Wayland input path (RemoteDesktop portal with a restore token), screenshots via portal/ScreenCast, and the TARS GNOME Shell extension for windows.
 - Cooperative control, the kill switch and the control border.
 - **Exit:** desktop and browser evals ≥ 65%; "explain the error on my screen" works in the terminal, VS Code and Firefox.
 
@@ -788,7 +802,7 @@ This assumes part-time work at about 15–20 h/week. Every phase has **exit crit
 - **Exit:** a week of daily use with fewer than 1 unwanted interruption a day and no missed urgent events from sources you configured.
 
 ### Phase 7 — Hardening and learning (ongoing)
-- Fine-tune on traces, packaging (install script plus systemd units), backup and restore of memory, Wayland path, and optional cloud escalation behind a switch.
+- Fine-tune on traces, packaging (install script plus systemd units), backup and restore of memory, and optional cloud escalation behind a switch.
 
 **Total:** about 18–20 weeks part-time to reach a genuinely useful daily-driver agent. Phases 0–3 (about 8 weeks) already beat v1 on every axis.
 
@@ -838,7 +852,7 @@ TARS records your clicks through the browser and AT-SPI events, generalizes them
 | Redaction misses some PII before cloud calls | Conservative masking, call log review, per-category "ask me each time" option, offline switch |
 | Accent-related STT misses | Model chosen on your voice, hotwords, entity correction, an easy "no, I said…" correction path |
 | Prompt injection through mail and web | Taint tracking, dual-LLM, T3 always confirmed, destinations only from you |
-| Wayland migration breaks X11 tools | Keep the X11 session for now; Wayland path in Phase 7 |
+| Wayland restrictions (no global input or window control without portals and consent prompts) | Portals are designed in from Phase 1 (PTT) and Phase 3 (input, screenshots). Consent is granted once and remembered with restore tokens. The GNOME extension covers windows. AT-SPI semantic actions need none of this |
 | Scope creep | Phase exit criteria gated by evals; don't start Phase N+1 until Phase N passes |
 
 ---
