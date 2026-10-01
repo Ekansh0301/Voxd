@@ -69,3 +69,13 @@ def test_secrets_unreadable_and_writes_stay_home(tmp_path):
 )  # fmt: skip
 def test_code_checkers(cmd, tier):
     assert classify_command(cmd, HOME)[0] == tier
+
+
+def test_gui_apps_not_started_from_sandbox():
+    from tars.tools.shell import gui_launch
+
+    assert gui_launch("firefox --marionette --remote-debugging-port=2828 &") == "firefox"
+    assert gui_launch("nohup code ~/proj") == "code"
+    assert gui_launch("MOZ_X=1 /usr/bin/firefox") == "firefox"
+    assert gui_launch("ls ~/Downloads") is None
+    assert gui_launch("grep firefox notes.txt") is None

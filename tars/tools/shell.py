@@ -8,6 +8,7 @@ the sandbox sets no_new_privs, so sudo and setuid binaries cannot elevate.
 """
 
 import asyncio
+import shlex
 import shutil
 from pathlib import Path
 
@@ -41,7 +42,30 @@ def sandbox_argv(cmd: str, home: Path, writable: bool) -> list[str]:
     return argv + ["--chdir", str(home), "/bin/sh", "-c", cmd]
 
 
+GUI_APPS = {"firefox", "code", "okular", "spotube", "ghostty", "termius-app", "superproductivity",
+            "nautilus", "gnome-text-editor", "gedit", "gnome-calculator", "evince", "vlc",
+            "libreoffice", "thunderbird", "chromium", "google-chrome", "update-manager",
+            "gnome-control-center", "xdg-open", "gio", "gtk-launch", "eog", "loupe", "totem"}  # fmt: skip
+
+
+def gui_launch(command: str) -> str | None:
+    """The GUI program a command would start, if any (they can't run in the sandbox)."""
+    try:
+        words = shlex.split(command)
+    except ValueError:
+        return None
+    for w in words:
+        if "=" in w.split("/")[0] or w in ("nohup", "setsid", "env", "exec", "command"):
+            continue  # VAR=x, wrappers
+        name = w.rsplit("/", 1)[-1]
+        return name if name in GUI_APPS else None
+    return None
+
+
 async def run_command(ctx: Context, command: str, timeout: int = 30) -> str:
+    if app := gui_launch(command):
+        return (f"error: {app} is a desktop app and can't start from the sandbox; use open_app"
+                " (or open_url for web pages, open_file for files) instead")  # fmt: skip
     tier, reason = classify_command(command, ctx.home)  # raises Denied for never-allowed
     if tier >= Tier.T2:
         await ctx.require(tier, f"run `{command}` ({reason})")

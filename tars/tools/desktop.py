@@ -44,9 +44,12 @@ async def open_url(ctx: Context, url: str) -> str:
         raise Denied(decision.reason)
     if ctx.desktop and BROWSER and BROWSER[0]():
         ctx.actions.append(f"open {url} (Firefox TARS)")
-        await BROWSER[1](url)
+        await BROWSER[1](url)  # starts Firefox (TARS) if needed
         return f"opened {url} in Firefox (TARS); web_read can read it"
     _run(ctx, ["xdg-open", url], f"open {url}")
+    if ctx.desktop and BROWSER:
+        return (f"opened {url} in the user's normal Firefox. TARS can't read or type there; "
+                "to do more, ask the user to close Firefox, then open the page again.")  # fmt: skip
     return f"opened {url}"
 
 

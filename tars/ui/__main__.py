@@ -16,6 +16,7 @@ URLs Chromium's fetch() refuses), so no network port is opened for it:
 import argparse
 import mimetypes
 import os
+import signal
 import sys
 from pathlib import Path
 from urllib.parse import quote
@@ -110,6 +111,8 @@ class DragFilter(QObject):
 
 
 def main():
+    # Ctrl+C in the terminal reaches this child too; exit quietly (TARS shuts it down anyway).
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     ap = argparse.ArgumentParser()
     ap.add_argument("--ws", required=True, help="avatar bus URL (with token)")
     ap.add_argument("--size", default="320x420", help="window WIDTHxHEIGHT")

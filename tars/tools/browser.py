@@ -12,8 +12,13 @@ small set and add TARS's rules on every call:
 Elements are addressed by their visible name, as with the desktop screen tools.
 """
 
+import asyncio
+import json
 import re
+import socket
+import subprocess
 from collections.abc import Callable
+from pathlib import Path
 
 from tars.agent.tools import Context, Denied, Registry, Tier, obj
 from tars.mcp.client import MCPServer
@@ -40,6 +45,18 @@ TEXTUAL = {
 LINE = re.compile(r'^\s*uid=(\S+) (\S+)(?: "((?:[^"\\]|\\.)*)")?(.*)$')
 
 _names: dict[str, str] = {}  # display name -> uid, from the last web_read
+_fields: list[str] = []  # text fields found by script that the snapshot missed
+
+# Visible text fields with a usable label. Snapshots skip some (e.g. ChatGPT's prompt).
+FIELD_JS = """
+const FIELDS = 'input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=file])'
+  + ':not([type=button]), textarea, [contenteditable=""], [contenteditable=true], [role=textbox], [role=searchbox]';
+const shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+const label = e => (e.getAttribute('aria-label') || e.placeholder || e.dataset.placeholder
+  || (e.labels && e.labels[0] && e.labels[0].innerText) || e.querySelector?.('[data-placeholder]')?.dataset.placeholder
+  || e.name || e.id || '').trim().slice(0, 80);
+const fields = () => Array.from(document.querySelectorAll(FIELDS)).filter(shown).filter(e => label(e));
+"""
 
 
 def _no_server() -> MCPServer | None:
@@ -49,18 +66,56 @@ def _no_server() -> MCPServer | None:
 _get_server: Callable[[], MCPServer | None] = _no_server
 
 
+MARIONETTE = ("127.0.0.1", 2828)
+LAUNCHER = Path(__file__).resolve().parent.parent.parent / "scripts" / "firefox-tars.sh"
+
+
+def _firefox_listening() -> bool:
+    try:
+        with socket.create_connection(MARIONETTE, timeout=0.3):
+            return True
+    except OSError:
+        return False
+
+
+def _normal_firefox_running() -> bool:
+    return subprocess.run(["pgrep", "-x", "firefox"], capture_output=True).returncode == 0
+
+
+async def ensure_firefox(url: str = "") -> bool:
+    """Start Firefox (TARS) if it isn't running (on `url`, so the first tab isn't the
+    home page); fail clearly if normal Firefox is open. True if it was started."""
+    if _firefox_listening():
+        return False
+    if _normal_firefox_running():
+        raise ConnectionError(
+            "Firefox is open normally, so TARS can't read or type in it. Ask the user to close "
+            "Firefox; then open_url starts Firefox (TARS) by itself."
+        )
+    subprocess.Popen([str(LAUNCHER), *([url] if url else [])], stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True)  # fmt: skip
+    for _ in range(40):
+        await asyncio.sleep(0.5)
+        if _firefox_listening():
+            await asyncio.sleep(1.0)  # let the first window finish opening
+            return True
+    raise ConnectionError("Firefox (TARS) didn't start within 20 seconds")
+
+
 def _server() -> MCPServer:
     server = _get_server()
     if server is None or server.proc is None or server.proc.returncode is not None:
-        raise ConnectionError(
-            "Firefox isn't connected. Open it with the 'Firefox (TARS)' launcher "
-            "(close any normal Firefox window first)."
-        )
+        raise ConnectionError("TARS's browser driver isn't running; restart TARS")
     return server
 
 
+async def _ready() -> MCPServer:
+    await ensure_firefox()
+    return _server()
+
+
 async def _current_url() -> str:
-    out = await _server().call_tool("list_pages", {})
+    out = await (await _ready()).call_tool("list_pages", {})
     m = re.search(r"^>\[\d+\] .*\((\S+)\)\s*$", out, re.M)
     return m.group(1) if m else ""
 
@@ -73,7 +128,10 @@ def short(url: str) -> str:
 
 async def _check(ctx: Context, action: str) -> str:
     url = await _current_url()
-    if url and not url.startswith(("about:", "data:")):
+    if not url or url.startswith(("about:", "chrome:", "moz-extension:")):
+        # Firefox's own pages (home, settings, about:config): never touched
+        raise Denied("this tab is one of Firefox's own pages; open_url a website first")
+    if not url.startswith("data:"):
         decision = ctx.sites.check(url, action)
         if not decision.allowed:
             raise Denied(decision.reason)
@@ -136,7 +194,7 @@ def _uid(name: str) -> str:
 
 
 async def web_tabs(ctx: Context) -> str:
-    out = await _server().call_tool("list_pages", {})
+    out = await (await _ready()).call_tool("list_pages", {})
     shown = []
     for line in out.splitlines():
         m = re.search(r"\((\S+)\)\s*$", line)
@@ -147,19 +205,28 @@ async def web_tabs(ctx: Context) -> str:
 
 
 async def web_switch(ctx: Context, tab: int) -> str:
-    return await _server().call_tool("select_page", {"pageIdx": tab})
+    return await (await _ready()).call_tool("select_page", {"pageIdx": tab})
 
 
 async def web_read(ctx: Context, mode: str = "elements") -> str:
     url = await _check(ctx, "read")
-    s = _server()
+    s = await _ready()
     if mode == "text":
         return f"{url}\n" + await s.call_tool("get_page_text", {})
     raw = await s.call_tool("take_snapshot", {})
     text, names = compact_snapshot(raw)
     _names.clear()
     _names.update(names)
-    return f"{url}\n{text or '(no readable elements)'}"
+    _fields.clear()
+    out = await s.call_tool(
+        "evaluate_script", {"function": "() => {" + FIELD_JS + "return fields().map(label) }"}
+    )
+    m = re.search(r"\[.*\]", out, re.S)
+    for label in json.loads(m.group(0)) if m else []:
+        if label and label not in _names and label not in _fields:
+            _fields.append(label)
+    extra = "".join(f'\nfield "{f}"' for f in _fields[:15])
+    return f"{url}\n{text or '(no readable elements)'}{extra}"
 
 
 async def web_click(ctx: Context, name: str) -> str:
@@ -169,12 +236,12 @@ async def web_click(ctx: Context, name: str) -> str:
     if any(w in label.lower() for w in RISKY_WORDS):
         await ctx.require(Tier.T3, f'click "{label}" on {short(url)}')
     ctx.actions.append(f"web click {label!r}")
-    out = await _server().call_tool("click_by_uid", {"uid": uid})
+    out = await (await _ready()).call_tool("click_by_uid", {"uid": uid})
     return f"{out} (not verified: web_read to see the result)"
 
 
 async def _field_type(uid: str) -> str:
-    out = await _server().call_tool(
+    out = await (await _ready()).call_tool(
         "evaluate_script",
         {"function": "(el) => (el.type || el.tagName).toLowerCase()", "args": [{"uid": uid}]},
     )
@@ -182,20 +249,41 @@ async def _field_type(uid: str) -> str:
     return m.group(1) if m else ""
 
 
+async def _fill_by_label(ctx: Context, url: str, label: str, text: str) -> str:
+    """Focus a script-found field by its label and type into it with real keystrokes."""
+    s = await _ready()
+    focus = ("() => {" + FIELD_JS + f"const want = {json.dumps(label.lower())};"
+             "const e = fields().find(f => label(f).toLowerCase() === want)"
+             " || fields().find(f => label(f).toLowerCase().includes(want));"
+             "if (!e) return 'missing'; e.focus(); return (e.type || 'text').toLowerCase(); }")  # fmt: skip
+    kind = await s.call_tool("evaluate_script", {"function": focus})
+    if '"missing"' in kind:
+        raise ValueError(f"nothing named {label!r} on the page; web_read again")
+    if '"password"' in kind:
+        raise Denied("TARS never types passwords; please enter it yourself")
+    ctx.actions.append(f"web fill {label!r}")
+    await s.call_tool("press_key", {"key": "Control+a"})
+    await s.call_tool("type_text", {"text": text})
+    return f"typed into {label!r} on {short(url)}"
+
+
 async def web_fill(ctx: Context, name: str, text: str) -> str:
     url = await _check(ctx, "fill")
+    if name not in _names and any(name.lower() in f.lower() for f in _fields):
+        return await _fill_by_label(ctx, url, name, text)
     uid = _uid(name)
     if await _field_type(uid) in ("password", "hidden"):
         raise Denied("TARS never types passwords; please enter it yourself")
     ctx.actions.append(f"web fill {name!r}")
     return (
-        await _server().call_tool("fill_by_uid", {"uid": uid, "value": text}) + f" on {short(url)}"
+        await (await _ready()).call_tool("fill_by_uid", {"uid": uid, "value": text})
+        + f" on {short(url)}"
     )
 
 
 async def web_type(ctx: Context, text: str, then_key: str = "") -> str:
     await _check(ctx, "type")
-    focused = await _server().call_tool(
+    focused = await (await _ready()).call_tool(
         "evaluate_script", {"function": "() => (document.activeElement?.type || '').toLowerCase()"}
     )
     if '"password"' in focused:
@@ -204,7 +292,7 @@ async def web_type(ctx: Context, text: str, then_key: str = "") -> str:
         await ctx.require(Tier.T3, "type and press Ctrl+Enter (often sends)")
     ctx.actions.append(f"web type {len(text)} chars")
     args = {"text": text, **({"submitKey": then_key} if then_key else {})}
-    return await _server().call_tool("type_text", args)
+    return await (await _ready()).call_tool("type_text", args)
 
 
 async def web_key(ctx: Context, key: str) -> str:
@@ -212,21 +300,61 @@ async def web_key(ctx: Context, key: str) -> str:
     k = key.lower().replace(" ", "")
     if k in ("control+enter", "ctrl+enter", "meta+enter"):
         await ctx.require(Tier.T3, f"press {key} (often sends)")
-    return await _server().call_tool("press_key", {"key": key})
+    return await (await _ready()).call_tool("press_key", {"key": key})
 
 
 async def web_back(ctx: Context) -> str:
-    return await _server().call_tool("navigate_history", {"direction": "back"})
+    return await (await _ready()).call_tool("navigate_history", {"direction": "back"})
+
+
+def _tab_for(pages: str, host: str) -> int | None:
+    """Newest tab (highest index) whose URL is on `host`, from list_pages output."""
+    found = [int(m.group(1)) for m in re.finditer(r"^>?\s*\[(\d+)\] .*\((\S+)\)\s*$", pages, re.M)
+             if short(m.group(2)) == host]  # fmt: skip
+    return max(found) if found else None
+
+
+async def _select(s: MCPServer, url: str) -> None:
+    """Make the tab showing `url` the selected one, so web_read reads it."""
+    host = short(url)
+    for _ in range(10):
+        pages = await s.call_tool("list_pages", {})
+        idx = _tab_for(pages, host)
+        if idx is not None:
+            await s.call_tool("select_page", {"pageIdx": idx})
+            return
+        await asyncio.sleep(0.5)
 
 
 async def web_open(url: str) -> str:
-    """Used by open_url when Firefox (TARS) is connected."""
-    return await _server().call_tool("new_page", {"url": url})
+    """Used by open_url when Firefox (TARS) is usable; starts it if needed."""
+    started = await ensure_firefox(url)
+    s = _server()
+    if started:  # its first tab already shows url
+        await _select(s, url)
+        return f"opened {url}"
+    pages = await s.call_tool("list_pages", {})
+    if (idx := _tab_for(pages, short(url))) is not None and url.rstrip("/").count("/") <= 2:
+        # that site is already open (and no particular page was asked for): switch to it
+        await s.call_tool("select_page", {"pageIdx": idx})
+        return f"switched to the open {short(url)} tab"
+    if "URL unavailable" in pages:
+        # Firefox's home page is selected, and the driver can't see past it: reuse that tab.
+        out = await s.call_tool("navigate_page", {"url": url})
+    else:
+        out = await s.call_tool("new_page", {"url": url})
+    if out.lstrip().lower().startswith("error"):
+        raise ConnectionError(out[:300])
+    await _select(s, url)
+    return out
 
 
 def connected() -> bool:
+    """Driver running and Firefox (TARS) usable, now or after starting it."""
     server = _get_server()
-    return server is not None and server.proc is not None and server.proc.returncode is None
+    if server is None or server.proc is None or server.proc.returncode is not None:
+        return False
+    return _firefox_listening() or not _normal_firefox_running()
 
 
 def register(reg: Registry, get_server: Callable[[], MCPServer | None]):
