@@ -120,8 +120,8 @@ class MCPManager:
                     self._unregister(registry, name)
                     self.servers.pop(name, None)
                 added = await self._start_one(name, spec, registry, quiet=warned)
-                if added:
-                    log.info(f"MCP {name} connected: {len(added)} tools")
+                if added is not None:  # [] = connected, its tools used only via wrappers
+                    log.info(f"MCP {name} connected" + (f": {len(added)} tools" if added else ""))
                     warned = False
                 elif not warned:
                     log.info(f"MCP {name} not available yet; retrying every {every:.0f}s")

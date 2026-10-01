@@ -13,6 +13,8 @@ import time
 from collections.abc import AsyncIterator, Callable
 from pathlib import Path
 
+import numpy as np
+
 from tars import router
 from tars.agent.loop import run_turn
 from tars.agent.tools import Context, Registry
@@ -77,6 +79,7 @@ class VoiceService:
             sites=self.sites, approve=self._approve, desktop=True, notify=self._announce
         )
         self.history: list[dict] = []
+        self._warned_clipping = False
         self.save_audio = save_audio  # opt-in: keep your utterances for STT evaluation
         if save_audio:
             save_audio.mkdir(parents=True, exist_ok=True)
@@ -235,8 +238,22 @@ class VoiceService:
             return f"Opening {site.key.capitalize() if site else target}."
         return NARRATION.get(name)
 
+    def _check_clipping(self, audio) -> None:
+        """Warn once if the mic is overdriven: clipped speech is what Whisper mishears."""
+        if self._warned_clipping or len(audio) < 8000:
+            return
+        clipped = float(np.mean(np.abs(audio) > 0.98))
+        if clipped > 0.003:
+            self._warned_clipping = True
+            log.warning(
+                f"microphone is clipping ({clipped:.1%} of samples at full scale), which garbles "
+                "speech recognition. Lower the input volume, e.g.: "
+                "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 45%"
+            )
+
     async def _handle_turn(self, audio, t_release: float):
         self._set(THINKING)
+        self._check_clipping(audio)
         text = await asyncio.to_thread(self.stt.transcribe, audio)
         t_stt = time.monotonic()
         if self.save_audio:
