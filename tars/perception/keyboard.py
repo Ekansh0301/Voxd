@@ -25,6 +25,8 @@ TOKEN_FILE = TARS_HOME / "remote-desktop.token"
 DESKTOP = "/org/freedesktop/portal/desktop"
 RD = DBusAddress(DESKTOP, "org.freedesktop.portal.Desktop", "org.freedesktop.portal.RemoteDesktop")
 KEYBOARD = 1
+POINTER = 2
+BUTTONS = {"left": 0x110, "right": 0x111, "middle": 0x112}  # evdev BTN_*
 
 SPECIAL = {
     "enter": 0xFF0D, "return": 0xFF0D, "tab": 0xFF09, "escape": 0xFF1B, "esc": 0xFF1B,
@@ -75,6 +77,7 @@ class Keyboard:
         self._router_cm = None
         self.router: DBusRouter | None = None
         self.session: str = ""
+        self.devices = 0
 
     async def __aenter__(self) -> "Keyboard":
         _ensure_desktop_file()
@@ -137,12 +140,16 @@ class Keyboard:
         res = await self._request("CreateSession", "a{sv}",
                                   ({"session_handle_token": ("s", "tars" + secrets.token_hex(4))},))  # fmt: skip
         self.session = res["session_handle"][1]
-        opts: dict[str, tuple[str, object]] = {"types": ("u", KEYBOARD), "persist_mode": ("u", 2)}
+        opts: dict[str, tuple[str, object]] = {
+            "types": ("u", KEYBOARD | POINTER),
+            "persist_mode": ("u", 2),
+        }
         if TOKEN_FILE.exists():
             opts["restore_token"] = ("s", TOKEN_FILE.read_text().strip())
         await self._request("SelectDevices", "oa{sv}", (self.session, opts))
         res = await self._request("Start", "osa{sv}", (self.session, "", {}), timeout=120)
-        if not res.get("devices", ("u", 0))[1] & KEYBOARD:
+        self.devices = res.get("devices", ("u", 0))[1]
+        if not self.devices & KEYBOARD:
             raise InputError("keyboard access wasn't granted")
         if "restore_token" in res:  # a fresh one every time; the old one is spent
             TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -166,6 +173,37 @@ class Keyboard:
             await self._key(s, False)
         await asyncio.sleep(0.01)
 
+    async def _pointer(self, method: str, sig: str, args: tuple) -> None:
+        assert self.router is not None
+        if not self.devices & POINTER:
+            raise InputError(
+                "pointer access wasn't granted; run `python -m tars.perception.keyboard`"
+            )
+        await self.router.send_and_get_reply(
+            new_method_call(RD, method, "oa{sv}" + sig, (self.session, {}, *args))
+        )
+
+    async def move_to(self, x: float, y: float) -> None:
+        """Absolute position (logical screen pixels) from relative motion: push the
+        pointer into the top-left corner, where it stops, then move by (x, y).
+        Virtual pointers get no acceleration, so this lands exactly."""
+        await self._pointer("NotifyPointerMotion", "dd", (-100000.0, -100000.0))
+        await asyncio.sleep(0.02)
+        await self._pointer("NotifyPointerMotion", "dd", (float(x), float(y)))
+        await asyncio.sleep(0.03)
+
+    async def click(self, x: float, y: float, button: str = "left", double: bool = False) -> None:
+        await self.move_to(x, y)
+        for _ in range(2 if double else 1):
+            await self._pointer("NotifyPointerButton", "iu", (BUTTONS[button], 1))
+            await asyncio.sleep(0.04)
+            await self._pointer("NotifyPointerButton", "iu", (BUTTONS[button], 0))
+            await asyncio.sleep(0.06)
+
+    async def scroll(self, steps: int) -> None:
+        """Wheel steps: positive = down."""
+        await self._pointer("NotifyPointerAxisDiscrete", "ui", (0, int(steps)))
+
     async def combo(self, combo: str) -> None:
         await self.tap(parse_combo(combo))
 
@@ -185,6 +223,9 @@ if __name__ == "__main__":  # one-time approval: python -m tars.perception.keybo
     async def _main():
         async with Keyboard() as kb:
             await kb.tap([SPECIAL["shift"]])  # harmless: a lone Shift press
-        print("keyboard access granted and remembered")
+        print(
+            f"granted and remembered: keyboard {'yes' if kb.devices & KEYBOARD else 'no'}, "
+            f"pointer {'yes' if kb.devices & POINTER else 'no'}"
+        )
 
     asyncio.run(_main())

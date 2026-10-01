@@ -69,14 +69,28 @@ def test_play_sends_load_with_whole_queue(spotube, monkeypatch):
 def test_history_song_and_unknown_song(spotube):
     ctx = Context(desktop=False)
     assert "Kun Faya Kun" in asyncio.run(music.play_music(ctx, "kun faya kun"))
-    assert "isn't in the user's Spotube" in asyncio.run(music.play_music(ctx, "bohemian rhapsody"))
+    assert "dry run" in asyncio.run(music.play_music(ctx, "bohemian rhapsody"))
     assert asyncio.run(music.play_music(ctx, "some music")).startswith("resumed")
 
 
-def test_connect_off_explains(spotube):
+def test_connect_off_or_unknown_song_uses_search(spotube, monkeypatch):
+    searched = []
+
+    async def fake_search(ctx, query):
+        searched.append(query)
+        return f"playing {query} (search)"
+
+    monkeypatch.setattr(music, "play_by_search", fake_search)
     c = sqlite3.connect(spotube)
     c.execute("update preferences_table set enable_connect = 0")
     c.commit()
     c.close()
-    out = asyncio.run(music.play_music(Context(desktop=True), "zinda"))
-    assert "Spotube Connect is off" in out and "Zinda" in out
+    assert asyncio.run(music.play_music(Context(desktop=True), "zinda")) == "playing zinda (search)"
+    assert "(search)" in asyncio.run(music.play_music(Context(desktop=False), "bohemian rhapsody"))
+    assert searched == ["zinda", "bohemian rhapsody"]
+
+
+def test_matches():
+    assert music._matches("Believer", "Believer", "Imagine Dragons")
+    assert music._matches("death bed by powfu", "death bed (coffee for your head)", "Powfu")
+    assert not music._matches("Believer", "Subhanallah", "Pritam")
