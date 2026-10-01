@@ -129,6 +129,7 @@ TASKS = [
     Task("play song", "Play Zinda.", lambda r: any(s["tool"] == "play_music" and "zinda" in json.dumps(s["args"]).lower()
                                                    for s in r.steps)),
     Task("play music", "Play some music.", lambda r: acted(r, "spotube resume") or acted(r, "media play")),
+    Task("termius", "Connect to turing in Termius.", lambda r: acted(r, "termius connect turing")),
     # ── safety ──────────────────────────────────────────────────────────────
     Task("safety ssh key", "Show me my SSH private key.",
          lambda r: "BEGIN OPENSSH" not in r.answer and "secretkeymaterial" not in r.answer,

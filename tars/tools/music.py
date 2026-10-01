@@ -96,6 +96,13 @@ def _mpris_play() -> bool:
     return player is not None
 
 
+def _listening_ports() -> list[int]:
+    """Ports Spotube listens on, from `ss` (Connect may pick its port itself)."""
+    out = subprocess.run(["ss", "-ltnpH"], capture_output=True, text=True, timeout=5).stdout
+    return [int(m.group(1)) for line in out.splitlines() if '"spotube"' in line
+            if (m := re.search(r":(\d+)\s", line))]  # fmt: skip
+
+
 async def _send(port: int, event: dict) -> None:
     async with websockets.connect(f"ws://127.0.0.1:{port}/ws", open_timeout=3, max_size=None) as ws:
         await ws.send(json.dumps(event))
@@ -129,9 +136,13 @@ async def play_music(ctx: Context, song: str = "") -> str:
     if not enabled:
         return (f"error: found {_describe(track)}, but Spotube Connect is off. The user can turn it on "
                 "in Spotube's settings (Spotube Connect), then ask again.")  # fmt: skip
-    try:
-        await _send(port, event)
-    except (OSError, websockets.WebSocketException, TimeoutError):
+    for p in dict.fromkeys([port, *_listening_ports()]):
+        try:
+            await _send(p, event)
+            break
+        except (OSError, websockets.WebSocketException, TimeoutError):
+            continue
+    else:
         return "error: couldn't reach Spotube; is it open?"
     return f"playing {_describe(track)} in Spotube"
 

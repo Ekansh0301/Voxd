@@ -5,6 +5,7 @@ folder (optionally running a command inside tmux), and Super Productivity
 reminders through its Local REST API.
 """
 
+import asyncio
 import difflib
 import subprocess
 import urllib.parse
@@ -17,6 +18,7 @@ import yaml  # type: ignore[import-untyped]
 from tars.agent.policy import check_read, classify_command, resolve
 from tars.agent.tools import Context, Denied, Registry, Tier, obj
 from tars.config import USER
+from tars.perception.atspi import Atspi, Node
 from tars.timeparse import parse_when
 from tars.tools.files import missing
 
@@ -73,6 +75,23 @@ def launch(ctx: Context, app: App, extra: list[str] | None = None) -> str:
         raise Denied(f"{app.key} is blocked for TARS")
     _spawn(ctx, app.launch + (extra or []), f"launch {app.key} {' '.join(extra or [])}".strip())
     return f"opened {app.key}"
+
+
+def _walk(n: Node):
+    yield n
+    for c in n.children:
+        yield from _walk(c)
+
+
+async def _termius_hosts(a: Atspi) -> dict[str, Node]:
+    """Host cards in Termius's Hosts list: {'ada': <button 'Ada ssh, user'>}."""
+    hosts: dict[str, Node] = {}
+    for app, w in await a.windows():
+        if "termius" in app.lower() and w.name == "Termius":
+            for n in _walk(await a.tree(w, max_nodes=1500, max_depth=40)):
+                if n.role == "button" and " ssh" in n.name:
+                    hosts[n.name.split(" ssh")[0].strip().lower()] = n
+    return hosts
 
 
 def register(reg: Registry, apps: AppRegistry):
@@ -157,6 +176,29 @@ def register(reg: Registry, apps: AppRegistry):
                  "and save its token in ~/.config/tars/secrets.yaml.") if at else ""  # fmt: skip
         return f"added task {title!r} to Super Productivity.{extra}"
 
+    async def termius_connect(ctx: Context, host: str) -> str:
+        app = apps.apps["termius"]
+        ctx.actions.append(f"termius connect {host}")
+        if not ctx.desktop:
+            return f"connecting to {host} in Termius (dry run)"
+        async with Atspi() as a:
+            hosts = await _termius_hosts(a)
+            if not hosts:
+                launch(ctx, app)
+                for _ in range(20):  # Termius takes a few seconds to show its host list
+                    await asyncio.sleep(1)
+                    if hosts := await _termius_hosts(a):
+                        break
+            if not hosts:
+                return (
+                    "error: Termius opened but its host list isn't showing; read_screen to see why"
+                )
+            match = difflib.get_close_matches(host.lower().strip(), list(hosts), n=1, cutoff=0.6)
+            if not match:
+                return f"error: no host {host!r} in Termius; it has: {', '.join(hosts)}"
+            result = await a.click(hosts[match[0]])
+        return f"{result} (Termius; read_screen to confirm the session opened)"
+
     def list_apps(ctx: Context) -> str:
         return apps.summary()
 
@@ -171,4 +213,6 @@ def register(reg: Registry, apps: AppRegistry):
              "in the user's words ('tomorrow at 9 am', 'in 30 minutes').",
              obj(["title"], title={"type": "string"}, when={"type": "string"}, notes={"type": "string"}),
              tier=Tier.T1)(add_reminder)  # fmt: skip
+    reg.tool("termius_connect", "Open Termius and connect to one of the user's saved hosts (e.g. ada, turing).",
+             obj(["host"], host={"type": "string"}), tier=Tier.T1, speak="Connecting")(termius_connect)  # fmt: skip
     reg.tool("list_apps", "The user's apps and what each is for.")(list_apps)
