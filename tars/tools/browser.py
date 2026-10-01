@@ -210,11 +210,76 @@ async def web_switch(ctx: Context, tab: int) -> str:
     return await (await _ready()).call_tool("select_page", {"pageIdx": tab})
 
 
+TEXT_JS = "() => ((document.querySelector('main') || document.body).innerText || '').slice(-6000)"
+
+
+_before_submit: str | None = None  # page text when Enter was last pressed
+
+# Sites whose answers arrive after a pause: a script that says when the answer is done.
+ANSWER_DONE_JS = {
+    "chatgpt.com": "() => { const a = [...document.querySelectorAll('[data-message-author-role=assistant]')].pop();"
+    " return !!a && a.innerText.trim().length > 0 && !document.querySelector('[data-testid=stop-button]') }",
+}
+
+
+async def _read_text(s: MCPServer) -> str:
+    out = await s.call_tool("evaluate_script", {"function": TEXT_JS})
+    m = re.search(r"```json\s*(.*?)\s*```", out, re.S)
+    try:
+        return str(json.loads(m.group(1))) if m else out
+    except json.JSONDecodeError:
+        return out
+
+
+async def _remember_before_submit() -> None:
+    global _before_submit
+    try:
+        _before_submit = await _read_text(await _ready())
+    except Exception:
+        _before_submit = None
+
+
+async def _page_text(s: MCPServer, settle: float = 40) -> str:
+    """The page's visible text, read by script (the driver's reader drops parts, e.g.
+    ChatGPT's answers). Right after a submit it waits for the page to change (an AI
+    site's answer to start), then until the text stops changing (it streams in)."""
+    global _before_submit
+    loop = asyncio.get_running_loop()
+    end = loop.time() + settle
+    text = await _read_text(s)
+    if _before_submit is not None:
+        done_js = ANSWER_DONE_JS.get(short(await _current_url()))
+        while loop.time() < end:
+            if done_js:
+                out = await s.call_tool("evaluate_script", {"function": done_js})
+                if re.search(r"\btrue\b", out):
+                    break
+            elif text != _before_submit:
+                break
+            await asyncio.sleep(1.0)
+            text = await _read_text(s)
+        _before_submit = None
+        text = await _read_text(s)
+    prev = None
+    stable = 0
+    while loop.time() < end:
+        if text == prev:
+            stable += 1
+            if stable >= 2:  # unchanged for ~3 s: the answer is done
+                break
+        else:
+            stable = 0
+        prev = text
+        await asyncio.sleep(1.5)
+        text = await _read_text(s)
+    return text
+
+
 async def web_read(ctx: Context, mode: str = "elements") -> str:
     url = await _check(ctx, "read")
     s = await _ready()
     if mode == "text":
-        return f"{url}\n" + await s.call_tool("get_page_text", {})
+        return f"{url}\n" + await _page_text(s)
     raw = await s.call_tool("take_snapshot", {})
     text, names = compact_snapshot(raw)
     _names.clear()
@@ -251,9 +316,24 @@ async def _field_type(uid: str) -> str:
     return m.group(1) if m else ""
 
 
+async def _to_front() -> None:
+    """Firefox draws no frames while hidden behind other windows, and WebDriver key and
+    mouse actions wait for a frame: hidden, they hang. So bring it forward first."""
+    try:
+        from tars.perception.windows import activate, list_windows
+
+        wins = [w for w in await list_windows() if "firefox" in (w.wm_class + w.app).lower()]
+        if wins and not any(w.focused for w in wins):
+            await activate(wins[0])
+            await asyncio.sleep(0.3)
+    except Exception:  # no GNOME extension: try anyway
+        pass
+
+
 async def _act(name: str, args: dict, timeout: float = 20) -> str:
     """An input action with a short timeout; driver errors and hangs become ConnectionError."""
     s = await _ready()
+    await _to_front()
     try:
         out = await s.call_tool(name, args, timeout=timeout)
     except TimeoutError as e:
@@ -305,6 +385,8 @@ async def web_type(ctx: Context, text: str, then_key: str = "") -> str:
     if then_key.lower().replace(" ", "") in ("control+enter", "ctrl+enter", "meta+enter"):
         await ctx.require(Tier.T3, "type and press Ctrl+Enter (often sends)")
     ctx.actions.append(f"web type {len(text)} chars")
+    if then_key:
+        await _remember_before_submit()
     args = {"text": text, **({"submitKey": then_key} if then_key else {})}
     return await _act("type_text", args, timeout=10 + len(text) / 20)
 
@@ -314,6 +396,8 @@ async def web_key(ctx: Context, key: str) -> str:
     k = key.lower().replace(" ", "")
     if k in ("control+enter", "ctrl+enter", "meta+enter"):
         await ctx.require(Tier.T3, f"press {key} (often sends)")
+    if k in ("enter", "return"):
+        await _remember_before_submit()
     return await _act("press_key", {"key": key})
 
 
