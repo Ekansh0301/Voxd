@@ -5,7 +5,9 @@ sanctioned way for an app on GNOME).
 TARS registers its own app id with the portal first. Without that, GNOME files
 the "Allow" under the empty id shared by every non-Flatpak app, and Flameshot
 etc. then get silent screenshots too. By default the permission is removed
-again after each capture, so GNOME asks every time TARS wants to look.
+again after each capture. GNOME 50 shows its "Allow" dialog only to the focused
+app, and TARS has no window, so the permission is granted once by hand (see the
+error message) and kept (config: screen.keep_screenshot_permission).
 """
 
 import asyncio
@@ -82,6 +84,11 @@ async def take_screenshot(timeout: float = 30, keep_permission: bool = False) ->
     code, results = signal.body
     if code != 0:
         raise ScreenshotError(
-            "screenshot refused or cancelled" if code == 1 else f"portal error {code}"
+            "screenshot refused or cancelled"
+            if code == 1
+            else "TARS has no screenshot permission (GNOME only asks the focused app, and TARS has no "
+            "window). Grant it once: busctl --user call org.freedesktop.impl.portal.PermissionStore "
+            "/org/freedesktop/impl/portal/PermissionStore org.freedesktop.impl.portal.PermissionStore "
+            f"SetPermission sbssas screenshot true screenshot {APP_ID} 1 yes"
         )
     return Path(unquote(urlparse(results["uri"][1]).path))

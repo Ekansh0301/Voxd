@@ -61,7 +61,9 @@ async def ask_image(png: bytes, question: str, cfg: dict | None = None) -> str:
 async def look_at_screen(ctx: Context, question: str, region: str = "full") -> str:
     if region not in REGIONS:
         return f"error: region must be one of {', '.join(REGIONS)}"
-    shot = await take_screenshot()
+    shot = await take_screenshot(
+        keep_permission=load().get("screen", {}).get("keep_screenshot_permission", True)
+    )
     with tempfile.TemporaryDirectory(prefix="tars-shot-") as tmp:
         private = Path(tmp) / "screen.png"
         shutil.move(str(shot), private)  # out of ~/Pictures, deleted with the temp dir

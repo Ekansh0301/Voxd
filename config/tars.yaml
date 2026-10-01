@@ -34,3 +34,9 @@ voice:
     speed: 1.0
     kokoro_model: kokoro-v1.0.onnx
     piper_voice: en_US-lessac-medium   # fallback when Kokoro is unavailable
+
+screen:
+  # Screenshot permission for TARS's own app id (org.tars.TARS; no other app).
+  # GNOME can't ask TARS (it has no window), so you grant it once with busctl.
+  # true keeps it; false drops it after each capture (re-grant needed every time).
+  keep_screenshot_permission: true
