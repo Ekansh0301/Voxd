@@ -117,6 +117,25 @@ if [[ ! -x "$PROJECT_DIR/.venv/bin/python" ]]; then
     python3.11 -m venv "$PROJECT_DIR/.venv"
 fi
 "$PROJECT_DIR/.venv/bin/pip" install --quiet --timeout 30 -e "$PROJECT_DIR[bench,dev]"
+# cuDNN 9 for GPU Whisper; --no-deps skips a duplicate cuBLAS (the CUDA toolkit has it)
+"$PROJECT_DIR/.venv/bin/pip" install --quiet --timeout 30 --no-deps "nvidia-cudnn-cu12>=9,<10"
+
+# ── Live2D avatar ─────────────────────────────────────────────────────────────
+# Live2D files need their licence accepted in a browser, so download these into
+# ~/Downloads yourself: Cubism SDK for Web (live2d.com/en/sdk/download/web) and the
+# Mao sample (live2d.com/en/learn/sample). This step unpacks and builds them.
+step "Live2D avatar"
+SDK_ZIP=$(ls -t "$HOME"/Downloads/CubismSdkForWeb-5-r.*.zip 2>/dev/null | head -1 || true)
+MAO_ZIP="$HOME/Downloads/mao_en.zip"
+if [[ -n "$SDK_ZIP" && -f "$MAO_ZIP" ]]; then
+    unzip -q -o "$SDK_ZIP" -d "$OPT"
+    mkdir -p "$TARS_HOME/avatar/models/mao_pro"
+    unzip -q -o "$MAO_ZIP" 'runtime/*' 'ReadMe.txt' -d "$TARS_HOME/avatar/models/mao_pro"
+    SDK_DIR="$OPT/$(basename "$SDK_ZIP" .zip)"
+    TARS_CUBISM_SDK="$SDK_DIR" "$PROJECT_DIR/.venv/bin/python" -m tars.ui.live2d.build
+else
+    echo "skipped: put CubismSdkForWeb-5-r.*.zip and mao_en.zip in ~/Downloads, then re-run"
+fi
 
 step "Done"
 du -sh "$MODELS"/* 2>/dev/null

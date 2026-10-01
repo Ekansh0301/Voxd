@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>TARS avatar</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; }
+  body > canvas { display: block; }
+  #pill {
+    position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%);
+    max-width: 92%; padding: 5px 12px; border-radius: 14px;
+    font: 500 12px/1.35 system-ui, sans-serif; color: #f2f4f8;
+    background: rgba(20, 22, 30, 0.72);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #pill .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: #8a8f9c; }
+  #pill.listening .dot { background: #4aa3ff; }
+  #pill.thinking  .dot { background: #f5b942; }
+  #pill.speaking  .dot { background: #53d38b; }
+  #pill.error     .dot { background: #ff5d5d; }
+  #pill.offline   .dot { background: #555; }
+</style>
+<!-- Cubism Core (proprietary, from your SDK download) must load before the framework. -->
+<script src="tars://avatar/core/live2dcubismcore.min.js"></script>
+</head>
+<body>
+<div id="pill" class="offline"><span class="dot"></span><span id="label">starting…</span></div>
+<script type="module" src="./src/main.ts"></script>
+</body>
+</html>

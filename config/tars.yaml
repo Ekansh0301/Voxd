@@ -18,11 +18,12 @@ voice:
   ptt:
     source: pttd                 # pttd (Right Ctrl via tars-pttd) | stdin (Enter key, for testing)
     socket: /run/tars-pttd.sock
+  avatar: true                   # Live2D overlay window (python -m tars.ui)
   stt:
     model: small.en              # dir under ~/.local/share/tars/models/stt; revisit after your recordings
-    device: cpu
-    compute_type: int8
-    threads: 6
+    device: cuda                 # 0.47 s vs 1.4 s on CPU; +~420 MB VRAM next to the Brain
+    compute_type: int8_float16
+    threads: 6                   # used by the CPU fallback
   tts:
     engine: kokoro               # kokoro | piper
     voice: af_heart              # chosen 2026-10-01

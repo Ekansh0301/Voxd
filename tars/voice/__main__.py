@@ -11,11 +11,17 @@ import argparse
 import asyncio
 import logging
 import subprocess
+import sys
 from pathlib import Path
+
+from tars.cuda import reexec_with_cuda_libs
+
+reexec_with_cuda_libs("tars.voice")  # before anything loads CTranslate2
 
 from tars import BIN_DIR
 from tars.config import load
 from tars.llm.client import is_up, stream_chat
+from tars.ui.bus import UiBus
 from tars.voice.ptt import pttd_events, stdin_events
 from tars.voice.service import VoiceService
 
@@ -50,6 +56,7 @@ async def ensure_llm(endpoint: str) -> subprocess.Popen | None:
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ptt", choices=["pttd", "stdin"], default=None)
+    ap.add_argument("--no-avatar", action="store_true", help="don't open the Live2D window")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
     logging.basicConfig(
@@ -58,13 +65,25 @@ async def main():
     )  # fmt: skip
     cfg = load()
     swap = await ensure_llm(cfg["llm"]["endpoint"])
+    bus = UiBus()
+    await bus.start()
+    avatar = None
+    if cfg["voice"].get("avatar", True) and not args.no_avatar:
+        avatar = subprocess.Popen([sys.executable, "-m", "tars.ui", "--ws", bus.url])
     try:
         await warm_up(cfg["llm"]["endpoint"], cfg["llm"]["brain"])
-        service = VoiceService(cfg)
+        service = VoiceService(
+            cfg, on_state=lambda state, info: bus.publish({"type": "state", "state": state, **info})
+        )
+        mouth = asyncio.create_task(service.mouth_loop(bus.publish))
         source = args.ptt or cfg["voice"]["ptt"]["source"]
         events = stdin_events() if source == "stdin" else pttd_events(cfg["voice"]["ptt"]["socket"])
         await service.run(events)
+        mouth.cancel()
     finally:
+        if avatar:
+            avatar.terminate()
+        await bus.close()
         if swap:
             swap.terminate()
 

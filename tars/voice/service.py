@@ -38,7 +38,10 @@ class VoiceService:
         self.history: list[dict] = []
         self.state = IDLE
         self._turn: asyncio.Task | None = None
-        log.info(f"ready: STT {vcfg['stt']['model']}, TTS {self.tts.engine}/{self.tts.voice}")
+        log.info(
+            f"ready: STT {vcfg['stt']['model']} on {self.stt.device}, "
+            f"TTS {self.tts.engine}/{self.tts.voice}"
+        )
 
     @staticmethod
     def _hotwords() -> list[str]:
@@ -48,6 +51,13 @@ class VoiceService:
     def _set(self, state: str, **info):
         self.state = state
         self.on_state(state, info)
+
+    async def mouth_loop(self, publish: Callable[[dict], None], hz: int = 30):
+        """Stream playback loudness to the avatar while speaking (lip-sync)."""
+        while True:
+            if self.state == SPEAKING:
+                publish({"type": "mouth", "v": round(self.player.level, 3)})
+            await asyncio.sleep(1 / hz)
 
     async def run(self, events: AsyncIterator[str]):
         self._set(IDLE)
@@ -61,7 +71,7 @@ class VoiceService:
                 self._set(IDLE, note="cancelled (shortcut)")
             elif ev == "up" and self.recorder.active:
                 audio = self.recorder.stop()
-                self._turn = asyncio.create_task(self._handle_turn(audio, time.monotonic()))
+                self._turn = asyncio.create_task(self._guarded_turn(audio, time.monotonic()))
 
     async def _interrupt(self):
         if self._turn and not self._turn.done():
@@ -69,6 +79,15 @@ class VoiceService:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._turn
         self.player.interrupt()
+
+    async def _guarded_turn(self, audio, t_release: float):
+        try:
+            await self._handle_turn(audio, t_release)
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:  # e.g. LLM server down: say so on the avatar, keep running
+            log.exception("turn failed")
+            self._set("error", note=str(e)[:120])
 
     async def _handle_turn(self, audio, t_release: float):
         self._set(THINKING)

@@ -15,9 +15,10 @@ as sending mail or submitting a form.
 Everything runs on-device by default. Cloud models are an opt-in fallback for
 hard tasks, and anything sent to them has personal details redacted first.
 
-> **Status: Phase 1 in progress.** Phase 0 (foundation and measurements) is done,
-> and you can already talk to TARS: push-to-talk → Whisper → Qwen3.5-4B → Kokoro
-> (`af_heart`). It can't operate the computer yet, and the Live2D avatar is next. The v1 prototype in [`legacy/`](legacy/) still runs
+> **Status: Phase 1 nearly done.** You can talk to TARS: hold Right Ctrl, speak, and
+> hear Kokoro (`af_heart`) reply about **1.7 s** after you let go, while a Live2D
+> avatar (Mao) listens, thinks and lip-syncs in the corner. It can't operate the
+> computer yet; that's Phase 2–3. The v1 prototype in [`legacy/`](legacy/) still runs
 > in the meantime. See [docs/PLAN.md](docs/PLAN.md) for the design and roadmap.
 
 ---
@@ -55,7 +56,9 @@ Intel iGPU (PRIME on-demand), Ubuntu 26.04 LTS with GNOME 50 on Wayland. The Pha
 | Cached 2,500-token prompt | ~0.1 s (6 s uncached) |
 | Scout: Qwen3.5-0.8B on the CPU only | 0 VRAM, 27–32 tok/s, runs beside the Brain without slowing it |
 | Screen read through the vision projector (CPU, 256 image tokens) | ~1 s warm |
-| Piper TTS, first sentence | 0.2–0.5 s |
+| Kokoro TTS (`af_heart`, fp32, CPU), first chunk | 0.7–0.9 s |
+| Whisper small.en on the GPU, beside the Brain | ~0.55 s; 3.55 of 3.71 GB VRAM in total |
+| **Key release → first spoken audio** | **~1.7 s** |
 | **On battery** | the GPU drops to P5 and the Brain to ~5 tok/s, so plug in for agent work |
 
 Two findings that matter on this GPU:
@@ -84,6 +87,15 @@ sudo bash scripts/install_pttd.sh            # once: Right Ctrl push-to-talk (re
 .venv/bin/python -m tars.voice               # hold Right Ctrl, speak, release
 .venv/bin/python -m tars.voice --ptt stdin   # or: Enter to start/stop, no install needed
 ```
+
+The avatar window opens with it: a transparent, always-on-top Live2D overlay.
+Drag it with the left mouse button; right-click to hide or quit it, or start
+with `--no-avatar`. Live2D's licence requires you to download two files
+yourself, accepting their terms: the [Cubism SDK for Web](https://www.live2d.com/en/sdk/download/web/)
+and the [Mao sample](https://www.live2d.com/en/learn/sample/). Put both zips in
+`~/Downloads` and `scripts/setup.sh` unpacks them and builds the avatar app
+(`python -m tars.ui.live2d.build`) on the official Cubism 5 framework. None of
+Live2D's files enter this repo.
 
 `tars-pttd` is a small sandboxed system service that watches only the
 push-to-talk key and reports nothing else. That's why you don't need to join the
