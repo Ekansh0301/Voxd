@@ -42,7 +42,8 @@ class MCPServer:
         self.proc = await asyncio.create_subprocess_exec(
             self.command, *self.args, cwd=self.cwd,
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=stderr,
-            env={**os.environ, **self.env}, limit=16 * 1024 * 1024,
+            env={**os.environ, **{k: os.path.expanduser(v) for k, v in self.env.items()}},
+            limit=16 * 1024 * 1024,
             start_new_session=True,  # Ctrl+C goes to TARS, which closes servers itself
         )  # fmt: skip
         self._reader = asyncio.create_task(self._read())

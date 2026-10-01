@@ -116,6 +116,8 @@ async def _ready() -> MCPServer:
 
 async def _current_url() -> str:
     out = await (await _ready()).call_tool("list_pages", {})
+    if out.lstrip().lower().startswith("error"):
+        raise ConnectionError(f"the Firefox driver failed: {out[:200]}")
     m = re.search(r"^>\[\d+\] .*\((\S+)\)\s*$", out, re.M)
     return m.group(1) if m else ""
 
@@ -369,7 +371,20 @@ def connected() -> bool:
     return _firefox_listening() or not _normal_firefox_running()
 
 
+GECKODRIVER_DIR = Path.home() / ".local/share/tars/opt/geckodriver"  # see config/mcp.json
+SNAP_GECKODRIVER = Path("/snap/firefox/current/usr/lib/firefox/geckodriver")
+
+
+def ensure_geckodriver() -> None:
+    """Use the geckodriver that ships with snap Firefox (always its version, no download)."""
+    target = GECKODRIVER_DIR / "geckodriver"
+    if SNAP_GECKODRIVER.exists() and not target.exists():
+        GECKODRIVER_DIR.mkdir(parents=True, exist_ok=True)
+        target.symlink_to(SNAP_GECKODRIVER)
+
+
 def register(reg: Registry, get_server: Callable[[], MCPServer | None]):
+    ensure_geckodriver()
     global _get_server
     _get_server = get_server
     from tars.tools import desktop

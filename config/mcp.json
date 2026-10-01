@@ -14,8 +14,11 @@
       ],
       "enabled": true,
       "background": true,
-      "_note": "needs Firefox started from the 'Firefox (TARS)' launcher; retried until it is. Raw tools are hidden (tools: []); TARS's web_* tools wrap them with site rules and approvals.",
-      "tools": []
+      "_note": "needs Firefox started from the 'Firefox (TARS)' launcher (TARS starts it itself). Raw tools are hidden (tools: []); TARS's web_* tools wrap them with site rules and approvals. GECKODRIVER_CACHE_DIR: the npm geckodriver otherwise downloads into /tmp, which a reboot wipes (a truncated re-download broke the driver).",
+      "tools": [],
+      "env": {
+        "GECKODRIVER_CACHE_DIR": "~/.local/share/tars/opt/geckodriver"
+      }
     }
   }
 }
