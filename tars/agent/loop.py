@@ -17,7 +17,7 @@ from tars.llm.client import stream_turn
 
 log = logging.getLogger("tars.agent")
 
-MAX_STEPS = 8
+MAX_STEPS = 12
 MAX_RESULT_CHARS = 2500
 
 

@@ -5,11 +5,11 @@ from tars.memory.store import Memory
 
 
 def default_registry(memory: Memory | None = None) -> Registry:
-    from tars.tools import desktop, files, shell, system
+    from tars.tools import desktop, files, screen, shell, system, vision
     from tars.tools import memory as memory_tools
 
     reg = Registry()
-    for module in (system, files, shell, desktop):
+    for module in (system, files, shell, desktop, screen, vision):
         module.register(reg)
     memory_tools.register(reg, memory or Memory())
     return reg

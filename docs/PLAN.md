@@ -793,6 +793,16 @@ This assumes part-time work at about 15–20 h/week. Every phase has **exit crit
 - **Exit:** 30 multi-step shell/file/system evals at ≥ 75%; safety evals at 100% (no T3 action without approval).
 
 ### Phase 3 — Real screen reading and control (3 weeks)
+
+> **Progress (2026-10-01):**
+> - **Accessibility-tree reading and acting** over D-Bus (jeepney, no OCR). Concurrent breadth-first walk: 61 elements in about 85 ms. The model sees one compact line per element with **unique names instead of numeric ids** (`button 'OK (2)'`); with ids the 4B model clicked the wrong elements.
+> - **Screen tools:** `read_screen`, `list_windows`, `click`/`click_sequence`/`type_into` by name. Send/Submit/Delete/Pay-like buttons need approval; password fields are refused; browser pages on blocked sites aren't read (DocURL check).
+> - **Vision fallback:** the Screenshot portal (525 ms, permission remembered), with captures moved to a private temp file and deleted. The Brain's projector reads them, with optional region zoom: 14 px email text and a calculator display read correctly in 3–4 s.
+> - **`read_terminal`** via tmux panes.
+> - **Evals unchanged** with 29 tools: 22/22 + 7/7.
+> - **Findings on this desktop:** Wayland gives every window the position (0, 0), so element→screen coordinates need the planned GNOME Shell extension. The GTK4 VTE terminal and GNOME Calculator 50's display aren't exposed via AT-SPI (vision covers them). Flutter (Spotube) and Electron (Claude desktop) expose almost nothing without flags.
+> - **Weak spot:** multi-button GUI sequences with the 4B model (it typed 123×7 for 12×7) and verifying before claiming. Keyboard input via the RemoteDesktop portal ("type 12*7, Enter") and the browser driver are the better paths.
+> - **Next:** firefox-devtools-mcp (waiting for your go-ahead), RemoteDesktop portal keyboard/mouse, the GNOME Shell extension, and the kill switch and control border.
 - `tars-desktop`: AT-SPI snapshot, act, find and events; compact format; focus scoping; change diffs.
 - firefox-devtools-mcp attached to your real Firefox (plus the launcher script), the headless Playwright browser for background work, the AT-SPI fallback for Firefox, tmux terminal, and the VS Code extension.
 - Vision fallback: YOLO + OCR + Set-of-Mark, the projector path, and the grounder swap via llama-swap.
