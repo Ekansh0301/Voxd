@@ -175,13 +175,14 @@ async def run_task(task: Task, cfg: dict, endpoint: str) -> dict:
         steps: list[dict] = []
         answer = ""
         for p in prompts:
-            facts = [t for _, t in memory.facts(p)]
-            messages = [{"role": "system", "content": system_prompt(cfg, can_act=True, facts=facts, sites=SITES)},
-                        *history, {"role": "user", "content": stamp(p)}]  # fmt: skip
+            facts = [t for _, t in memory.facts(p)]  # as in the voice service: in the user message
+            user_msg = stamp(p) + (f"\n(you remember: {'; '.join(facts)})" if facts else "")
+            messages = [{"role": "system", "content": system_prompt(cfg, can_act=True, sites=SITES)},
+                        *history, {"role": "user", "content": user_msg}]  # fmt: skip
             result = await run_turn(messages, reg, ctx, endpoint, cfg["llm"]["brain"],
                                     max_tokens=400, temperature=0.3, top_p=0.8)  # fmt: skip
             history += [
-                {"role": "user", "content": p},
+                {"role": "user", "content": user_msg},
                 {"role": "assistant", "content": result.answer},
             ]
             steps += result.steps

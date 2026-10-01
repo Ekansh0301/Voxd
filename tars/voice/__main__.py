@@ -16,7 +16,7 @@ from pathlib import Path
 
 from tars.config import load
 from tars.cuda import reexec_with_cuda_libs
-from tars.llm.swap import ensure_llm, warm_up
+from tars.llm.swap import ensure_llm, prime, warm_up
 from tars.mcp.manager import MCPManager
 from tars.tools import browser
 from tars.ui.bus import UiBus
@@ -62,6 +62,13 @@ async def main():
         browser.register(service.registry, lambda: mcp.servers.get("firefox"))
         if added := await mcp.start(service.registry):
             logging.getLogger("tars.mcp").info(f"MCP tools: {', '.join(added)}")
+
+        async def _prime():
+            secs = await prime(cfg["llm"]["endpoint"], cfg["llm"]["brain"], service.system,
+                               service.registry.schemas())  # fmt: skip
+            logging.getLogger("tars.voice").info(f"prompt cache primed in {secs:.1f}s")
+
+        primer = asyncio.create_task(_prime())
         mouth = asyncio.create_task(service.mouth_loop(bus.publish))
         source = args.ptt or cfg["voice"]["ptt"]["source"]
         events = stdin_events() if source == "stdin" else pttd_events(cfg["voice"]["ptt"]["socket"])
@@ -69,6 +76,7 @@ async def main():
             await service.run(events)
         finally:
             mouth.cancel()
+            primer.cancel()
             await mcp.close()
     finally:
         if avatar:

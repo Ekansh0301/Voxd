@@ -2,6 +2,7 @@
 
 import asyncio
 import subprocess
+import time
 from pathlib import Path
 
 from tars import BIN_DIR
@@ -14,6 +15,18 @@ async def warm_up(endpoint: str, model: str):
     """llama-swap loads a model on first use (~3-7 s); do that before the first turn."""
     async for _ in stream_chat(endpoint, model, [{"role": "user", "content": "hi"}], max_tokens=1):
         pass
+
+
+async def prime(endpoint: str, model: str, system: str, tools: list[dict]) -> float:
+    """Pre-fill llama.cpp's cache with the system prompt + tool list (~4k tokens, about
+    10 s cold), so the first real turn only processes the new words. Returns seconds."""
+    from tars.llm.client import stream_turn
+
+    t = time.monotonic()
+    msgs = [{"role": "system", "content": system}, {"role": "user", "content": "hi"}]
+    async for _ in stream_turn(endpoint, model, msgs, tools=tools, max_tokens=1):
+        pass
+    return time.monotonic() - t
 
 
 async def ensure_llm(endpoint: str) -> subprocess.Popen | None:

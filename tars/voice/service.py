@@ -28,6 +28,12 @@ from tars.voice.tts import Speaker
 
 log = logging.getLogger("tars.voice")
 
+
+def _brief(args: dict) -> str:
+    """Tool args for the history note, long values cut ('text': 'Dear …')."""
+    return ", ".join(f"{k}={str(v)[:40]!r}" for k, v in args.items())
+
+
 IDLE, LISTENING, THINKING, SPEAKING, CONFIRMING = (
     "idle", "listening", "thinking", "speaking", "confirming",
 )  # fmt: skip
@@ -208,14 +214,19 @@ class VoiceService:
             flush=True,
         )
         self.history += [
-            {"role": "user", "content": text},
+            {"role": "user", "content": stamp(text)},
             {
                 "role": "assistant",
-                "content": f"{reply}\n[done: {route.tool}({route.args}) -> {result[:80]}]",
+                "content": f"{reply}\n[done: {route.tool}({_brief(route.args)})]",
             },
         ]
         self._set(IDLE)
         return True
+
+    @property
+    def system(self) -> str:
+        """Same text every turn unless a personality setting changes (cache-friendly)."""
+        return system_prompt(self.cfg, can_act=True, sites=self.site_names)
 
     def _narration(self, name: str, args: dict) -> str | None:
         if name in ("open_url", "open_app"):
@@ -248,16 +259,14 @@ class VoiceService:
         ):
             return
 
+        # The system prompt (and the 4k-token tool list after it) must stay byte-identical
+        # between turns so llama.cpp reuses its cache; anything that varies goes here.
         facts = [f for _, f in self.memory.facts(text, limit=4)]
+        user_msg = stamp(text) + (f"\n(you remember: {'; '.join(facts)})" if facts else "")
         messages = [
-            {
-                "role": "system",
-                "content": system_prompt(
-                    self.cfg, can_act=True, facts=facts, sites=self.site_names
-                ),
-            },
+            {"role": "system", "content": self.system},
             *self.history[-2 * self.cfg["llm"].get("history_turns", 8) :],
-            {"role": "user", "content": stamp(text)},
+            {"role": "user", "content": user_msg},
         ]
 
         chunks: asyncio.Queue[str | None] = asyncio.Queue()
@@ -304,12 +313,14 @@ class VoiceService:
 
         # History keeps the spoken answer plus a compact, unspoken note of what was done,
         # so follow-ups ("move it to Documents") know what "it" is.
-        note = "; ".join(f"{s['tool']}({s['args']}) -> {s['result'][:80]}" for s in result.steps)
+        # Compact: what was done (tool + args), not the outputs. Every history token is
+        # re-read on the next turn, and follow-ups ("move it") only need the args.
+        note = ", ".join(f"{s['tool']}({_brief(s['args'])})" for s in result.steps)
         self.history += [
-            {"role": "user", "content": text},
+            {"role": "user", "content": user_msg},  # exactly as sent: keeps the cache valid
             {
                 "role": "assistant",
-                "content": result.answer + (f"\n[done: {note[:500]}]" if note else ""),
+                "content": result.answer + (f"\n[done: {note[:240]}]" if note else ""),
             },
         ]
         self.memory.add_turn(text, result.answer)

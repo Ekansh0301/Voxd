@@ -12,6 +12,7 @@ import itertools
 import json
 import logging
 import os
+import signal
 
 from tars import TARS_HOME
 
@@ -42,6 +43,7 @@ class MCPServer:
             self.command, *self.args, cwd=self.cwd,
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=stderr,
             env={**os.environ, **self.env}, limit=16 * 1024 * 1024,
+            start_new_session=True,  # Ctrl+C goes to TARS, which closes servers itself
         )  # fmt: skip
         self._reader = asyncio.create_task(self._read())
         self.info = await self.request(
@@ -116,11 +118,13 @@ class MCPServer:
 
     async def close(self):
         if self.proc and self.proc.returncode is None:
+            # The server runs in its own session (e.g. npx -> node): stop the whole group.
             with contextlib.suppress(ProcessLookupError):
-                self.proc.terminate()
+                os.killpg(self.proc.pid, signal.SIGTERM)
             try:
                 await asyncio.wait_for(self.proc.wait(), 5)
             except TimeoutError:
-                self.proc.kill()
+                with contextlib.suppress(ProcessLookupError):
+                    os.killpg(self.proc.pid, signal.SIGKILL)
         if self._reader:
             self._reader.cancel()

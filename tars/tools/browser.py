@@ -236,7 +236,7 @@ async def web_click(ctx: Context, name: str) -> str:
     if any(w in label.lower() for w in RISKY_WORDS):
         await ctx.require(Tier.T3, f'click "{label}" on {short(url)}')
     ctx.actions.append(f"web click {label!r}")
-    out = await (await _ready()).call_tool("click_by_uid", {"uid": uid})
+    out = await _act("click_by_uid", {"uid": uid})
     return f"{out} (not verified: web_read to see the result)"
 
 
@@ -247,6 +247,18 @@ async def _field_type(uid: str) -> str:
     )
     m = re.search(r'"([a-z-]+)"', out)
     return m.group(1) if m else ""
+
+
+async def _act(name: str, args: dict, timeout: float = 20) -> str:
+    """An input action with a short timeout; driver errors and hangs become ConnectionError."""
+    s = await _ready()
+    try:
+        out = await s.call_tool(name, args, timeout=timeout)
+    except TimeoutError as e:
+        raise ConnectionError(f"Firefox didn't respond to {name} within {timeout:.0f}s") from e
+    if out.lstrip().lower().startswith("error"):
+        raise ConnectionError(out[:300])
+    return out
 
 
 async def _fill_by_label(ctx: Context, url: str, label: str, text: str) -> str:
@@ -262,8 +274,8 @@ async def _fill_by_label(ctx: Context, url: str, label: str, text: str) -> str:
     if '"password"' in kind:
         raise Denied("TARS never types passwords; please enter it yourself")
     ctx.actions.append(f"web fill {label!r}")
-    await s.call_tool("press_key", {"key": "Control+a"})
-    await s.call_tool("type_text", {"text": text})
+    await _act("press_key", {"key": "Control+a"})
+    await _act("type_text", {"text": text}, timeout=10 + len(text) / 20)
     return f"typed into {label!r} on {short(url)}"
 
 
@@ -276,7 +288,7 @@ async def web_fill(ctx: Context, name: str, text: str) -> str:
         raise Denied("TARS never types passwords; please enter it yourself")
     ctx.actions.append(f"web fill {name!r}")
     return (
-        await (await _ready()).call_tool("fill_by_uid", {"uid": uid, "value": text})
+        await _act("fill_by_uid", {"uid": uid, "value": text}, timeout=10 + len(text) / 20)
         + f" on {short(url)}"
     )
 
@@ -292,7 +304,7 @@ async def web_type(ctx: Context, text: str, then_key: str = "") -> str:
         await ctx.require(Tier.T3, "type and press Ctrl+Enter (often sends)")
     ctx.actions.append(f"web type {len(text)} chars")
     args = {"text": text, **({"submitKey": then_key} if then_key else {})}
-    return await (await _ready()).call_tool("type_text", args)
+    return await _act("type_text", args, timeout=10 + len(text) / 20)
 
 
 async def web_key(ctx: Context, key: str) -> str:
@@ -300,7 +312,7 @@ async def web_key(ctx: Context, key: str) -> str:
     k = key.lower().replace(" ", "")
     if k in ("control+enter", "ctrl+enter", "meta+enter"):
         await ctx.require(Tier.T3, f"press {key} (often sends)")
-    return await (await _ready()).call_tool("press_key", {"key": key})
+    return await _act("press_key", {"key": key})
 
 
 async def web_back(ctx: Context) -> str:
