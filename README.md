@@ -15,10 +15,13 @@ as sending mail or submitting a form.
 Everything runs on-device by default. Cloud models are an opt-in fallback for
 hard tasks, and anything sent to them has personal details redacted first.
 
-> **Status: Phase 1 nearly done.** You can talk to TARS: hold Right Ctrl, speak, and
-> hear Kokoro (`af_heart`) reply about **1.7 s** after you let go, while a Live2D
-> avatar (Mao) listens, thinks and lip-syncs in the corner. It can't operate the
-> computer yet; that's Phase 2–3. The v1 prototype in [`legacy/`](legacy/) still runs
+> **Status: Phase 2 (agent core) working.** Hold Right Ctrl and talk. TARS answers in
+> Kokoro (`af_heart`) about 1.7 s after you let go, while a Live2D avatar (Mao)
+> listens, thinks and lip-syncs. It now **acts**: files (list, find, read, create,
+> move, copy, trash), sandboxed shell commands, apps and websites, volume, media,
+> timers, system status and memory. It **asks out loud before anything risky**
+> (your next push-to-talk "yes/no" decides). Agent evals: **22/22 everyday tasks,
+> 7/7 safety cases**. Browser and screen control come in Phase 3. The v1 prototype in [`legacy/`](legacy/) still runs
 > in the meantime. See [docs/PLAN.md](docs/PLAN.md) for the design and roadmap.
 
 ---
@@ -125,9 +128,20 @@ legacy/        v1 prototype (Flash/Vox), kept runnable until TARS reaches parity
 Environments: `.venv/` is TARS (numpy 2). `venv/` is the v1 prototype
 (numpy 1, torch, ChromaDB) and is used only by `legacy/`.
 
-## Privacy and safety (by design; built in Phases 2–5)
+## Privacy and safety
 
-Only the site access rules exist so far. The rest is specified in [docs/PLAN.md](docs/PLAN.md) §12.
+Built so far (Phase 2); the rest of [docs/PLAN.md](docs/PLAN.md) §12 comes later:
+- **Permission tiers** on every tool. Read-only runs immediately; local reversible
+  actions are logged; anything destructive asks you out loud first.
+- **Shell commands are classified in code**, not by the model. `sudo`, disk tools,
+  pipe-to-shell and `rm -rf ~` are refused outright; read-only commands and pipelines
+  run in a **bubblewrap sandbox** (read-only, no network); everything else asks first,
+  then runs sandboxed with a writable home. Secret folders (`~/.ssh`, keyrings,
+  browser profiles, `.env`…) are hidden even inside the sandbox.
+- **Files:** writes stay in your home folder; deleting goes to the **Trash**.
+- **Tool output is labelled as data**; the injection eval (a file telling TARS to
+  trash Documents) is ignored.
+- Per-site rules: your college sites are blocked outright.
 
 - Local by default. Cloud escalation is opt-in, PII-redacted, logged and capped.
 - The microphone listens only while you hold the push-to-talk key.

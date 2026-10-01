@@ -26,6 +26,9 @@ class Speaker:
     def _load_kokoro(self):
         from kokoro_onnx import Kokoro
 
+        # its phonemizer resets its own log level on import; this warning is harmless
+        logging.getLogger("phonemizer").setLevel(logging.ERROR)
+
         self._kokoro = Kokoro(
             str(TTS_DIR / self.cfg.get("kokoro_model", "kokoro-v1.0.onnx")),
             str(TTS_DIR / "voices-v1.0.bin"),

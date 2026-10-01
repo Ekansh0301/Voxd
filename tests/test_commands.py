@@ -40,3 +40,15 @@ def test_apply_updates_and_persists(tmp_path):
     assert cfg["personality"]["humor"] == 40
     saved = yaml.safe_load(user.read_text())
     assert saved == {"user_name": "Ekansh", "personality": {"humor": 40}}
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [("Yes.", True), ("Yeah go ahead", True), ("Do it", True), ("Okay sure", True),
+     ("No.", False), ("No, don't", False), ("Wait, not yet", False), ("Yes, actually no", False),
+     ("What is it doing?", None), ("", None)],
+)  # fmt: skip
+def test_parse_yes_no(text, expected):
+    from tars.voice.commands import parse_yes_no
+
+    assert parse_yes_no(text) is expected

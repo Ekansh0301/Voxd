@@ -102,3 +102,6 @@ bench/results/*.wav
 bench/results/*.log
 bench/results/tts/
 legacy/data/memory.bak-*/
+
+# agent eval results
+evals/results/

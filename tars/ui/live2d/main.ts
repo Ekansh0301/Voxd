@@ -9,9 +9,11 @@ type Info = { heard?: string; note?: string };
 // Mao PRO: exp_01 neutral, exp_07 wide-eyed (attentive), exp_08 frown.
 const EXPRESSION: Record<string, string> = {
   idle: 'exp_01', listening: 'exp_07', thinking: 'exp_01', speaking: 'exp_01', error: 'exp_08',
+  confirming: 'exp_07',
 };
 const STATE_TEXT: Record<string, string> = {
   idle: 'ready', listening: 'listening…', thinking: 'thinking…', speaking: 'speaking', error: 'something went wrong',
+  confirming: 'say yes or no',
 };
 
 const pill = document.getElementById('pill') as HTMLDivElement;
@@ -33,7 +35,7 @@ function setState(next: string, info: Info = {}): void {
   state = next;
   const m = model();
   if (m && EXPRESSION[next]) m.setExpression(EXPRESSION[next]);
-  if (next !== 'speaking') window.__tarsMouth = 0;
+  if (next !== 'speaking' && next !== 'confirming') window.__tarsMouth = 0;
   const extra = info.heard ? ` — “${info.heard}”` : info.note ? ` — ${info.note}` : '';
   setPill(next, (STATE_TEXT[next] ?? next) + extra);
 }
@@ -62,7 +64,7 @@ function connect(url: string): void {
   ws.onopen = () => setState('idle');
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
-    if (msg.type === 'mouth') window.__tarsMouth = state === 'speaking' ? msg.v : 0;
+    if (msg.type === 'mouth') window.__tarsMouth = state === 'speaking' || state === 'confirming' ? msg.v : 0;
     else if (msg.type === 'state') setState(msg.state, msg);
   };
   ws.onclose = () => {

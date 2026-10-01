@@ -775,6 +775,17 @@ This assumes part-time work at about 15–20 h/week. Every phase has **exit crit
 - **Exit:** under 1.5 s to first audio on the fast path; STT word error rate ≤ 8% on your recorded commands; PTT interrupt stops speech in under 200 ms; no UI calls from worker threads (enforced by signals).
 
 ### Phase 2 — Agent core and MCP (3 weeks)
+
+> **Progress (2026-10-01): core done.**
+> - **Agent loop:** native tool calling, streamed so answers still start speaking early; up to 8 steps, loop detection, and tool output labelled as data.
+> - **22 built-in tools with permission tiers:** files, sandboxed shell, desktop, media, volume, timers, system status, memory.
+> - **Policy engine in code:** `shlex` command classification, secret paths, home-only writes, Trash instead of delete.
+> - **Spoken approvals** with a "confirming" avatar state.
+> - **Memory:** SQLite with FTS5 (facts and turns), with relevant facts injected per turn.
+> - **Fast-path router** for unambiguous commands.
+> - **Stdlib MCP client and manager** (tiers from tool annotations; unknown tools are T2).
+> - **Evals** (`python -m evals.agent_eval`): **22/22 everyday, 7/7 safety**, median 1.7 s per task. They caught three real bugs, all fixed: move-into-new-folder lost files, read+write "copies" corrupted files, and the sandbox hid a home folder under /tmp.
+> - **Deviations:** built-in tools instead of separate `tars-system`/`tars-shell` MCP servers (lower latency; they can still be exposed over MCP later). `find_tool` is deferred until the tool count needs it. `bashlex` is replaced by a conservative `shlex` classifier (anything with shell control operators asks first). Embeddings in memory are deferred.
 - Bus, tasks, blackboard, GPU scheduler, and the single-agent loop with JSON-schema actions, task card and verification.
 - MCP client manager, registry, compaction and `find_tool`.
 - `tars-system` and `tars-shell` (sandbox, bashlex), plus reference filesystem and git servers.

@@ -74,3 +74,20 @@ def apply(cfg: dict, key: str, value: int | str, user_file: Path = USER) -> str:
     user_file.write_text(yaml.safe_dump(data, sort_keys=False))
     spoken = f"{value} percent" if isinstance(value, int) else value
     return f"{key.capitalize()} setting {spoken}."
+
+
+YES = {"yes", "yeah", "yep", "yup", "sure", "ok", "okay", "go", "ahead", "do", "it", "confirm",
+       "proceed", "please", "affirmative", "correct", "right", "haan", "ha"}  # fmt: skip
+NO = {"no", "nope", "nah", "don't", "dont", "stop", "cancel", "wait", "never", "negative", "not"}
+
+
+def parse_yes_no(text: str) -> bool | None:
+    """Spoken answer to "Should I ...?": True / False / None (unclear -> treated as no)."""
+    words = re.findall(r"[a-z']+", text.lower())
+    if not words:
+        return None
+    if any(w in NO for w in words):  # "no, don't", "not yet", "yes... actually no"
+        return False
+    if words[0] in YES or {"go", "ahead"} <= set(words) or {"do", "it"} <= set(words):
+        return True
+    return None

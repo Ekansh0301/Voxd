@@ -21,6 +21,7 @@ reexec_with_cuda_libs("tars.voice")  # before anything loads CTranslate2
 from tars import BIN_DIR
 from tars.config import load
 from tars.llm.client import is_up, stream_chat
+from tars.mcp.manager import MCPManager
 from tars.ui.bus import UiBus
 from tars.voice.ptt import pttd_events, stdin_events
 from tars.voice.service import VoiceService
@@ -86,11 +87,17 @@ async def main():
             on_state=lambda state, info: bus.publish({"type": "state", "state": state, **info}),
             save_audio=RECORDINGS if args.save_audio else None,
         )
+        mcp = MCPManager()
+        if added := await mcp.start(service.registry):
+            logging.getLogger("tars.mcp").info(f"MCP tools: {', '.join(added)}")
         mouth = asyncio.create_task(service.mouth_loop(bus.publish))
         source = args.ptt or cfg["voice"]["ptt"]["source"]
         events = stdin_events() if source == "stdin" else pttd_events(cfg["voice"]["ptt"]["socket"])
-        await service.run(events)
-        mouth.cancel()
+        try:
+            await service.run(events)
+        finally:
+            mouth.cancel()
+            await mcp.close()
     finally:
         if avatar:
             avatar.terminate()
