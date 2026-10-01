@@ -5,6 +5,7 @@ import difflib
 import re
 import shutil
 import subprocess
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from tars.agent.tools import Context, Denied, Registry, Tier, obj
@@ -30,13 +31,21 @@ def _run(ctx: Context, argv: list[str], what: str) -> None:
         )
 
 
-def open_url(ctx: Context, url: str) -> str:
-    if not re.match(r"^[a-z]+://", url):
+# (is_connected, async open) set by tars.tools.browser when Firefox (TARS) is available
+BROWSER: tuple[Callable[[], bool], Callable[[str], Awaitable[str]]] | None = None
+
+
+async def open_url(ctx: Context, url: str) -> str:
+    if not re.match(r"^(https?|file|data|about):", url):
         site = ctx.sites.resolve(url)  # "youtube" -> registry entry
         url = site.url if site else "https://" + url
     decision = ctx.sites.check(url, "open")
     if not decision.allowed:
         raise Denied(decision.reason)
+    if ctx.desktop and BROWSER and BROWSER[0]():
+        ctx.actions.append(f"open {url} (Firefox TARS)")
+        await BROWSER[1](url)
+        return f"opened {url} in Firefox (TARS); web_read can read it"
     _run(ctx, ["xdg-open", url], f"open {url}")
     return f"opened {url}"
 

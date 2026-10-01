@@ -41,3 +41,22 @@ def test_allow_list_and_dead_server(tmp_path):
         return names
 
     assert asyncio.run(go()) == ["fake_echo"]
+
+
+def test_background_server_registers_when_ready(tmp_path):
+    async def go():
+        cfg = {
+            "mcpServers": {"fake": {"command": sys.executable, "args": [FAKE], "background": True}}
+        }
+        mgr, reg = MCPManager(cfg), Registry()
+        now = await mgr.start(reg)  # returns at once
+        for _ in range(50):
+            if "fake_echo" in reg.tools:
+                break
+            await asyncio.sleep(0.1)
+        found = "fake_echo" in reg.tools
+        await mgr.close()
+        return now, found
+
+    now, found = asyncio.run(go())
+    assert now == [] and found

@@ -115,6 +115,8 @@ class Registry:
             return f"refused: {e}"
         except TypeError as e:  # wrong/missing arguments from the model
             return f"error: bad arguments for {name}: {e}"
+        except (ValueError, ConnectionError) as e:  # expected: "nothing named X", app not open
+            return f"error: {e}"
         except Exception as e:
             log.exception(f"tool {name} failed")
             return f"error: {type(e).__name__}: {e}"

@@ -14,6 +14,7 @@ Tiers come from each tool's annotations when the server provides them
 an unknown tool always asks first.
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -72,29 +73,64 @@ class MCPManager:
     def __init__(self, config: dict | None = None):
         self.config = config if config is not None else load_config()
         self.servers: dict[str, MCPServer] = {}
+        self._tasks: list[asyncio.Task] = []
 
     async def start(self, registry: Registry) -> list[str]:
-        """Start enabled servers and register their tools; returns registered names."""
-        added = []
+        """Start enabled servers and register their tools; returns names registered now.
+        Servers marked "background" (e.g. Firefox, which may not be open yet) are started
+        in a retry loop instead, and their tools appear once they connect."""
+        added: list[str] = []
         for name, spec in self.config.get("mcpServers", {}).items():
             if not spec.get("enabled", True):
                 continue
-            server = MCPServer(
-                name, spec["command"], spec.get("args"), spec.get("env"), spec.get("cwd")
-            )
-            try:
-                await server.start()
-                tools = await server.list_tools()
-            except Exception as e:
-                log.warning(f"MCP server {name} unavailable: {e}")
-                await server.close()
+            if spec.get("background"):
+                self._tasks.append(asyncio.create_task(self._keep_alive(name, spec, registry)))
                 continue
-            self.servers[name] = server
-            allow = set(spec.get("tools") or [t["name"] for t in tools])
-            for t in tools:
-                if t["name"] in allow:
-                    added.append(self._register(registry, name, server, t, spec.get("tiers", {})))
+            added += await self._start_one(name, spec, registry) or []
         return added
+
+    async def _start_one(
+        self, name: str, spec: dict, registry: Registry, quiet: bool = False
+    ) -> list[str] | None:
+        server = MCPServer(
+            name, spec["command"], spec.get("args"), spec.get("env"), spec.get("cwd")
+        )
+        try:
+            await server.start()
+            tools = await server.list_tools()
+        except Exception as e:
+            if not quiet:
+                log.warning(f"MCP server {name} unavailable: {e}")
+            await server.close()
+            return None
+        self.servers[name] = server
+        allow = set(spec["tools"]) if "tools" in spec else {t["name"] for t in tools}
+        tiers = spec.get("tiers", {})
+        return [
+            self._register(registry, name, server, t, tiers) for t in tools if t["name"] in allow
+        ]
+
+    async def _keep_alive(self, name: str, spec: dict, registry: Registry, every: float = 20):
+        """(Re)connect a background server whenever it isn't running."""
+        warned = False
+        while True:
+            server = self.servers.get(name)
+            if server is None or server.proc is None or server.proc.returncode is not None:
+                if server is not None:
+                    self._unregister(registry, name)
+                    self.servers.pop(name, None)
+                added = await self._start_one(name, spec, registry, quiet=warned)
+                if added:
+                    log.info(f"MCP {name} connected: {len(added)} tools")
+                    warned = False
+                elif not warned:
+                    log.info(f"MCP {name} not available yet; retrying every {every:.0f}s")
+                    warned = True
+            await asyncio.sleep(every)
+
+    def _unregister(self, registry: Registry, sname: str):
+        for tool_name in [n for n in registry.tools if n.startswith(f"{sname}_")]:
+            registry.tools.pop(tool_name, None)
 
     def _register(self, registry: Registry, sname: str, server: MCPServer, tool: dict,
                   tiers: dict) -> str:  # fmt: skip
@@ -109,5 +145,7 @@ class MCPManager:
         return local
 
     async def close(self):
+        for t in self._tasks:
+            t.cancel()
         for s in self.servers.values():
             await s.close()

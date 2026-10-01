@@ -18,6 +18,7 @@ from tars.config import load
 from tars.cuda import reexec_with_cuda_libs
 from tars.llm.swap import ensure_llm, warm_up
 from tars.mcp.manager import MCPManager
+from tars.tools import browser
 from tars.ui.bus import UiBus
 from tars.voice.ptt import pttd_events, stdin_events
 from tars.voice.service import VoiceService
@@ -58,6 +59,7 @@ async def main():
             save_audio=RECORDINGS if args.save_audio else None,
         )
         mcp = MCPManager()
+        browser.register(service.registry, lambda: mcp.servers.get("firefox"))
         if added := await mcp.start(service.registry):
             logging.getLogger("tars.mcp").info(f"MCP tools: {', '.join(added)}")
         mouth = asyncio.create_task(service.mouth_loop(bus.publish))
