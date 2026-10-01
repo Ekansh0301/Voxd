@@ -71,6 +71,11 @@ def _apps() -> dict[str, tuple[str, str]]:
 
 
 def open_app(ctx: Context, name: str) -> str:
+    from tars.tools.apps import AppRegistry, launch
+
+    registered = AppRegistry().resolve(name)  # config/apps.yaml: right flags, access rules
+    if registered is not None:
+        return launch(ctx, registered)
     apps = _apps()
     q = ALIASES.get(name.lower().strip(), name.lower().strip())
     close = difflib.get_close_matches(q, list(apps), n=1, cutoff=0.6)

@@ -20,6 +20,24 @@ def _rel(p: Path, ctx: Context) -> str:
         return str(p)
 
 
+def missing(p: Path, ctx: Context) -> str:
+    """'does not exist' plus where a file of that name actually is, so a model
+    that dropped a folder from the path can retry. Hidden folders are skipped."""
+    found: list[str] = []
+    seen = 0
+    for root, dirs, files in os.walk(ctx.home):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in SKIP_DIRS]
+        if len(Path(root).relative_to(ctx.home).parts) >= 5:
+            dirs[:] = []
+        seen += len(files) + len(dirs)
+        if p.name in files or p.name in dirs:
+            found.append(_rel(Path(root) / p.name, ctx))
+        if len(found) >= 3 or seen > 50_000:
+            break
+    hint = f" Did you mean {' or '.join(found)}?" if found else ""
+    return f"error: {_rel(p, ctx)} does not exist.{hint}"
+
+
 def _size(n: int) -> str:
     for unit in ("B", "KB", "MB", "GB"):
         if n < 1024:
@@ -51,6 +69,8 @@ def list_dir(ctx: Context, path: str = "~", show_hidden: bool = False) -> str:
 def read_file(ctx: Context, path: str) -> str:
     p = resolve(path, ctx.home)
     check_read(p, ctx.home)
+    if not p.exists():
+        return missing(p, ctx)
     if not p.is_file():
         return f"error: {_rel(p, ctx)} is not a file"
     data = p.read_bytes()[: MAX_READ * 4]
@@ -113,7 +133,7 @@ async def move_path(ctx: Context, source: str, destination: str) -> str:
     check_write(src, ctx.home)
     check_write(dst, ctx.home)
     if not src.exists():
-        return f"error: {_rel(src, ctx)} does not exist"
+        return missing(src, ctx)
     dst = _target(src, dst, destination)
     if dst.exists():
         await ctx.require(Tier.T2, f"replace {_rel(dst, ctx)} with {_rel(src, ctx)}")
@@ -127,7 +147,7 @@ async def copy_path(ctx: Context, source: str, destination: str) -> str:
     check_read(src, ctx.home)
     check_write(dst, ctx.home)
     if not src.exists():
-        return f"error: {_rel(src, ctx)} does not exist"
+        return missing(src, ctx)
     dst = _target(src, dst, destination)
     if dst.exists():
         await ctx.require(Tier.T2, f"replace {_rel(dst, ctx)} with a copy of {_rel(src, ctx)}")
@@ -143,7 +163,7 @@ async def trash_path(ctx: Context, path: str) -> str:
     p = resolve(path, ctx.home)
     check_write(p, ctx.home)
     if not p.exists():
-        return f"error: {_rel(p, ctx)} does not exist"
+        return missing(p, ctx)
     if p.resolve() == ctx.home.resolve():
         raise Denied("refusing to trash the whole home folder")
     what = (

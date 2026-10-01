@@ -12,4 +12,8 @@ def default_registry(memory: Memory | None = None) -> Registry:
     for module in (system, files, shell, desktop, screen, vision):
         module.register(reg)
     memory_tools.register(reg, memory or Memory())
+    from tars.tools import apps, code
+
+    apps.register(reg, apps.AppRegistry())
+    code.register(reg)
     return reg

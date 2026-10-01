@@ -21,7 +21,21 @@ READ_ONLY = {
     "printenv", "locale", "sensors", "upower", "ip", "ss", "journalctl", "systemctl", "git",
     "python3", "python", "node", "pip", "pip3", "dpkg", "apt", "ollama", "md5sum", "sha256sum",
     "column", "less", "more", "jq", "cal", "diff", "cmp", "seq",
+    # code checkers (read-only unless told to fix; see _read_only)
+    "pylint", "flake8", "mypy", "pyright", "ruff", "black", "eslint", "shellcheck", "pyflakes",
+    "pycodestyle",
 }  # fmt: skip
+# `python -m <module>` that only reads code
+PY_MODULES_READ_ONLY = {
+    "pylint",
+    "mypy",
+    "flake8",
+    "pyflakes",
+    "pycodestyle",
+    "py_compile",
+    "ruff",
+    "black",
+}
 # Read-only only with these first arguments (or flags).
 SUBCOMMANDS = {
     "git": {"status", "log", "diff", "show", "branch", "remote", "rev-parse", "describe", "tag", "blame", "--version", "version"},
@@ -84,8 +98,23 @@ def _read_only(argv: list[str]) -> bool:
     prog = Path(argv[0]).name
     if prog not in READ_ONLY:
         return False
+    if prog in ("python", "python3") and len(argv) >= 3 and argv[1] == "-m":
+        module = argv[2]
+        if module in ("ruff", "black"):  # read-only only with check/diff flags
+            return _read_only([module, *argv[3:]])
+        return module in PY_MODULES_READ_ONLY
     if prog in SUBCOMMANDS and (len(argv) < 2 or argv[1] not in SUBCOMMANDS[prog]):
         return False  # e.g. `git push`, `pip install`, bare `python3` (runs code)
+    fixes = {"--fix", "--unsafe-fixes", "--fix-only", "-w", "--write"}
+    if prog == "ruff":
+        sub = argv[1] if len(argv) > 1 else ""
+        return (sub == "check" and not fixes & set(argv)) or (
+            sub == "format" and bool({"--check", "--diff"} & set(argv))
+        )
+    if prog == "black":
+        return bool({"--check", "--diff"} & set(argv))
+    if prog == "eslint" and fixes & set(argv):
+        return False
     if prog in FORBIDDEN_FLAGS and FORBIDDEN_FLAGS[prog] & set(argv[1:]):
         return False
     if prog == "awk" and any("system" in a or "print >" in a for a in argv[1:]):

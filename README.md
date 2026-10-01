@@ -19,9 +19,11 @@ hard tasks, and anything sent to them has personal details redacted first.
 > Kokoro (`af_heart`) about 1.7 s after you let go, while a Live2D avatar (Mao)
 > listens, thinks and lip-syncs. It now **acts**: files (list, find, read, create,
 > move, copy, trash), sandboxed shell commands, apps and websites, volume, media,
-> timers, system status and memory. It **asks out loud before anything risky**
-> (your next push-to-talk "yes/no" decides). Agent evals: **22/22 everyday tasks,
-> 7/7 safety cases**. Browser and screen control come in Phase 3. The v1 prototype in [`legacy/`](legacy/) still runs
+> timers, system status and memory. Phase 3 adds screen reading (accessibility
+> tree, with vision as fallback), your real Firefox, your apps (Okular, VS Code,
+> Ghostty, Super Productivity reminders…) and coding aids (check, fix, undo). It
+> **asks out loud before anything risky** (your next push-to-talk "yes/no" decides).
+> Agent evals: **27/27 everyday tasks, 7/7 safety cases**. The v1 prototype in [`legacy/`](legacy/) still runs
 > in the meantime. See [docs/PLAN.md](docs/PLAN.md) for the design and roadmap.
 
 ---

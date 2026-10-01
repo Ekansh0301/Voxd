@@ -1,0 +1,63 @@
+# TARS app registry: the desktop apps you use, what for, and how TARS may use them.
+# access: full (open + read + act) | read (open + read its window) | open_only | blocked
+# launch: command (list form); `{repo}` = this repo. Apps are also findable by name via
+# their .desktop entries; this file adds purpose, rules and how TARS should drive them.
+
+apps:
+  spotube:
+    aliases: [spotube, music, spotify]
+    purpose: Music. "Play <song>" means play it in Spotube.
+    launch: [spotube]
+    access: full
+    notes: Flutter app; play/pause/next work through media controls (MPRIS).
+
+  termius:
+    aliases: [termius, ssh]
+    purpose: SSH client. "Connect to ada / turing" means open that host in Termius.
+    launch: [/opt/Termius/termius-app, --force-renderer-accessibility]
+    access: full
+    notes: Electron; started with accessibility on so TARS can read and click hosts. Never types passwords.
+
+  vscode:
+    aliases: [vs code, vscode, code, visual studio code, editor]
+    purpose: Coding. Open folders and files (at a line), review and fix code.
+    launch: [code]
+    access: full
+
+  superproductivity:
+    aliases: [super productivity, superproductivity, todo, tasks, reminders]
+    purpose: Tasks and reminders. "Remind me to X at T" adds a task with a reminder; can also sync.
+    launch: ["/opt/Super Productivity/superproductivity", --force-renderer-accessibility]
+    access: full
+    notes: Reminders use its Local REST API (Settings > Misc > Enable local REST API; token in ~/.config/tars/secrets.yaml).
+
+  ghostty:
+    aliases: [ghostty, terminal, shell, console]
+    purpose: Your default terminal. Open it in a folder, optionally running a command (inside tmux).
+    launch: [ghostty]
+    access: full
+
+  firefox:
+    aliases: [firefox, browser, web browser]
+    purpose: Web browsing; TARS works in it when started from the "Firefox (TARS)" launcher.
+    launch: ["{repo}/scripts/firefox-tars.sh"]
+    access: full
+
+  okular:
+    aliases: [okular, pdf reader, pdf viewer, document viewer]
+    purpose: Open PDFs and other documents.
+    launch: [okular]
+    access: full
+    handles: [.pdf, .epub, .djvu, .ps, .xps, .cbz]
+
+  software-updater:
+    aliases: [software updater, updater, update manager, updates]
+    purpose: Ubuntu updates. Only open it; installing updates is yours.
+    launch: [update-manager]
+    access: open_only
+
+  settings-sound:
+    aliases: [sound settings, volume settings, audio settings]
+    purpose: Open GNOME sound settings (volume itself is controlled directly).
+    launch: [gnome-control-center, sound]
+    access: open_only

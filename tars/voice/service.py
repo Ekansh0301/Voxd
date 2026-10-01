@@ -17,7 +17,7 @@ from tars import router
 from tars.agent.loop import run_turn
 from tars.agent.tools import Context, Registry
 from tars.memory.store import Memory
-from tars.persona import system_prompt
+from tars.persona import stamp, system_prompt
 from tars.sites import SiteRegistry
 from tars.tools import default_registry
 from tars.voice import commands
@@ -257,7 +257,7 @@ class VoiceService:
                 ),
             },
             *self.history[-2 * self.cfg["llm"].get("history_turns", 8) :],
-            {"role": "user", "content": text},
+            {"role": "user", "content": stamp(text)},
         ]
 
         chunks: asyncio.Queue[str | None] = asyncio.Queue()

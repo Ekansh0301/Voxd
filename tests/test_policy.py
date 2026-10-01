@@ -57,3 +57,15 @@ def test_secrets_unreadable_and_writes_stay_home(tmp_path):
     with pytest.raises(Denied):
         check_write(tmp_path / ".config/autostart/x.desktop", tmp_path)
     check_write(tmp_path / "Documents/todo.txt", tmp_path)
+
+
+@pytest.mark.parametrize(
+    "cmd,tier",
+    [("pylint app.py", Tier.T0), ("ruff check src", Tier.T0), ("ruff check --fix src", Tier.T2),
+     ("ruff format --check .", Tier.T0), ("ruff format .", Tier.T2), ("black --check .", Tier.T0),
+     ("black .", Tier.T2), ("mypy pkg", Tier.T0), ("python3 -m pylint app.py", Tier.T0),
+     ("python3 -m py_compile app.py", Tier.T0), ("python3 -m http.server", Tier.T2),
+     ("pytest -q", Tier.T2), ("eslint --fix .", Tier.T2)],
+)  # fmt: skip
+def test_code_checkers(cmd, tier):
+    assert classify_command(cmd, HOME)[0] == tier

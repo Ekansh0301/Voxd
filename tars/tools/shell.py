@@ -27,6 +27,11 @@ def sandbox_argv(cmd: str, home: Path, writable: bool) -> list[str]:
     argv += ["--bind" if writable else "--ro-bind", str(home), str(home)]
     if not writable:
         argv += ["--unshare-net"]
+    if not writable:  # tools that write caches (mypy, ruff, pylint) use the sandbox's /tmp
+        for var, val in (("XDG_CACHE_HOME", "/tmp/.cache"), ("MYPY_CACHE_DIR", "/tmp/.mypy_cache"),
+                         ("RUFF_CACHE_DIR", "/tmp/.ruff_cache"), ("PYLINTHOME", "/tmp/.pylint"),
+                         ("PYTHONDONTWRITEBYTECODE", "1")):  # fmt: skip
+            argv += ["--setenv", var, val]
     for s in SECRETS:  # defence in depth: hide secrets even from read-only commands
         p = home / s
         if p.is_dir():
