@@ -51,7 +51,7 @@ async def _forget_permission(router) -> None:
         pass  # nothing stored
 
 
-async def take_screenshot(timeout: float = 30, keep_permission: bool = False) -> Path:
+async def take_screenshot(timeout: float = 30, keep_permission: bool = True) -> Path:
     """Full-screen PNG; returns its path (the portal saves it, usually in ~/Pictures)."""
     _ensure_desktop_file()
     async with open_dbus_router(bus="SESSION") as router:
