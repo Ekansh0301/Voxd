@@ -24,6 +24,10 @@ voice:
     device: cuda                 # 0.47 s vs 1.4 s on CPU; +~420 MB VRAM next to the Brain
     compute_type: int8_float16
     threads: 6                   # used by the CPU fallback
+    # Words Whisper is nudged toward. Keep it to names it would otherwise mishear:
+    # long lists bias it (on 2026-10-01 "TARS" was heard as "WhatsApp").
+    hotwords: [TARS, Outlook, GitHub, YouTube, LeetCode, ChatGPT, Gemini, Claude,
+               LinkedIn, Monkeytype, QuickRef, Firefox, Kokoro, Qwen]
   tts:
     engine: kokoro               # kokoro | piper
     voice: af_heart              # chosen 2026-10-01

@@ -19,5 +19,12 @@ def reexec_with_cuda_libs(module: str):
         return
     current = [p for p in os.environ.get("LD_LIBRARY_PATH", "").split(":") if p]
     extra = [str(d) for d in LIB_DIRS if d.exists() and str(d) not in current]
-    env = {**os.environ, "TARS_CUDA_LIBS": "1", "LD_LIBRARY_PATH": ":".join(extra + current)}
+    env = {
+        **os.environ,
+        "TARS_CUDA_LIBS": "1",
+        "LD_LIBRARY_PATH": ":".join(extra + current),
+        # cap what CTranslate2's allocator keeps cached (bin growth, min bin, max bin,
+        # max cached bytes): the GPU is shared with the Brain and has little slack
+        "CT2_CUDA_CACHING_ALLOCATOR_CONFIG": "4,3,12,104857600",
+    }
     os.execve(sys.executable, [sys.executable, "-m", module, *sys.argv[1:]], env)

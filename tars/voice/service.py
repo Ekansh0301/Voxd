@@ -9,10 +9,11 @@ import contextlib
 import logging
 import time
 from collections.abc import AsyncIterator, Callable
+from pathlib import Path
 
 from tars.llm.client import stream_chat
 from tars.persona import system_prompt
-from tars.sites import SiteRegistry
+from tars.voice import commands
 from tars.voice.audio import Recorder
 from tars.voice.chunker import SpeechChunker
 from tars.voice.stt import Transcriber
@@ -24,29 +25,32 @@ IDLE, LISTENING, THINKING, SPEAKING = "idle", "listening", "thinking", "speaking
 
 
 class VoiceService:
-    def __init__(self, cfg: dict, on_state: Callable[[str, dict], None] | None = None):
+    def __init__(
+        self,
+        cfg: dict,
+        on_state: Callable[[str, dict], None] | None = None,
+        save_audio: Path | None = None,
+    ):
         from tars.voice.audio import Player
 
         self.cfg = cfg
         self.on_state = on_state or (lambda state, info: None)
         vcfg = cfg["voice"]
         log.info("loading speech models…")
-        self.stt = Transcriber(vcfg["stt"], hotwords=self._hotwords())
+        self.stt = Transcriber(vcfg["stt"], hotwords=vcfg["stt"].get("hotwords"))
         self.tts = Speaker(vcfg["tts"])
         self.player = Player(self.tts.sample_rate)
         self.recorder = Recorder()
         self.history: list[dict] = []
+        self.save_audio = save_audio  # opt-in: keep your utterances for STT evaluation
+        if save_audio:
+            save_audio.mkdir(parents=True, exist_ok=True)
         self.state = IDLE
         self._turn: asyncio.Task | None = None
         log.info(
             f"ready: STT {vcfg['stt']['model']} on {self.stt.device}, "
             f"TTS {self.tts.engine}/{self.tts.voice}"
         )
-
-    @staticmethod
-    def _hotwords() -> list[str]:
-        words = ["TARS", "Outlook", "GitHub", "YouTube", "LeetCode", "WhatsApp", "Firefox"]
-        return sorted(set(words + SiteRegistry().hotwords()))
 
     def _set(self, state: str, **info):
         self.state = state
@@ -80,6 +84,17 @@ class VoiceService:
                 await self._turn
         self.player.interrupt()
 
+    def _save(self, audio, text: str):
+        import json
+
+        import soundfile as sf
+
+        assert self.save_audio is not None
+        name = time.strftime("%Y%m%d-%H%M%S")
+        sf.write(self.save_audio / f"{name}.wav", audio, 16000)
+        with (self.save_audio / "manifest.jsonl").open("a") as f:
+            f.write(json.dumps({"file": f"{name}.wav", "heard": text, "text": text}) + "\n")
+
     async def _guarded_turn(self, audio, t_release: float):
         try:
             await self._handle_turn(audio, t_release)
@@ -93,11 +108,23 @@ class VoiceService:
         self._set(THINKING)
         text = await asyncio.to_thread(self.stt.transcribe, audio)
         t_stt = time.monotonic()
+        if self.save_audio:
+            self._save(audio, text)
         if not text:
             self._set(IDLE, note="heard nothing")
             return
         self._set(THINKING, heard=text)
         print(f"\nyou : {text}", flush=True)
+
+        if cmd := commands.parse(text):  # personality settings: no LLM round-trip
+            confirmation = commands.apply(self.cfg, *cmd)
+            samples = await asyncio.to_thread(self.tts.synth, confirmation)
+            self._set(SPEAKING)
+            self.player.enqueue(samples)
+            await asyncio.to_thread(self.player.wait_idle)
+            print(f"tars: {confirmation}", flush=True)
+            self._set(IDLE)
+            return
 
         messages = [{"role": "system", "content": system_prompt(self.cfg)}]
         messages += self.history[-2 * self.cfg["llm"].get("history_turns", 8) :]

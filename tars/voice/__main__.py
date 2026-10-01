@@ -26,6 +26,7 @@ from tars.voice.ptt import pttd_events, stdin_events
 from tars.voice.service import VoiceService
 
 SWAP_CONFIG = Path.home() / ".config" / "tars" / "llama-swap.yaml"
+RECORDINGS = Path.home() / ".local" / "share" / "tars" / "recordings"
 
 
 async def warm_up(endpoint: str, model: str):
@@ -57,12 +58,20 @@ async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ptt", choices=["pttd", "stdin"], default=None)
     ap.add_argument("--no-avatar", action="store_true", help="don't open the Live2D window")
+    ap.add_argument(
+        "--save-audio",
+        action="store_true",
+        help=f"keep each utterance + transcript in {RECORDINGS} (local only) to benchmark STT",
+    )
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(name)s: %(message)s", datefmt="%H:%M:%S",
     )  # fmt: skip
+    if not args.verbose:  # per-request chatter from libraries
+        for name in ("httpx", "faster_whisper", "websockets.server", "phonemizer"):
+            logging.getLogger(name).setLevel(logging.ERROR)
     cfg = load()
     swap = await ensure_llm(cfg["llm"]["endpoint"])
     bus = UiBus()
@@ -73,7 +82,9 @@ async def main():
     try:
         await warm_up(cfg["llm"]["endpoint"], cfg["llm"]["brain"])
         service = VoiceService(
-            cfg, on_state=lambda state, info: bus.publish({"type": "state", "state": state, **info})
+            cfg,
+            on_state=lambda state, info: bus.publish({"type": "state", "state": state, **info}),
+            save_audio=RECORDINGS if args.save_audio else None,
         )
         mouth = asyncio.create_task(service.mouth_loop(bus.publish))
         source = args.ptt or cfg["voice"]["ptt"]["source"]

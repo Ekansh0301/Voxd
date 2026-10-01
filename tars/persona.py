@@ -25,7 +25,9 @@ def system_prompt(cfg: dict, can_act: bool = False) -> str:
     ]
     if not can_act:
         lines.append(
-            "You cannot operate the computer yet (no apps, browser, files or mail); that "
-            "arrives in a later version. If asked to do something, say so in one sentence."
+            "Rule for requests to open apps or websites, read or send mail, or touch files: "
+            "reply in one short sentence that controlling the laptop arrives in a later "
+            "version. Never bring this up otherwise; greetings, questions and chat get a "
+            "normal answer."
         )
     return "\n".join(lines)
