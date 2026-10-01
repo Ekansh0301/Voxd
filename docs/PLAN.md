@@ -761,6 +761,12 @@ This assumes part-time work at about 15–20 h/week. Every phase has **exit crit
 - **Exit:** a filled-in benchmark table (commit it as `docs/BENCHMARKS.md`), and the Brain, STT and TTS chosen.
 
 ### Phase 1 — Voice v2 and avatar v1 (2 weeks)
+
+> **Progress (2026-10-01):**
+> - Done: the voice loop (`python -m tars.voice`), `tars-pttd` for Right Ctrl on Wayland, the speech chunker, Kokoro `af_heart`, and interrupting with the key.
+> - Measured from key release to first audio: **~2.8–3.2 s**. That's speech-to-text 1.5 s (CPU Whisper pads every clip to 30 s), the Brain's first token +0.3 s, and Kokoro's first chunk +1.0 s.
+> - Whisper small.en on the GPU takes 0.47 s and fits next to the Brain (3550/3714 MiB). It needs cuDNN 9 in `.venv`. Parakeet on the CPU (no padding) is the alternative. Choose on your recordings.
+> - Next: the Live2D avatar overlay.
 - A separate voice process: PTT capture through the GlobalShortcuts portal (evdev fallback), Silero VAD trimming, turn manager, interrupt-on-PTT, sentence-streamed TTS, hotwords and entity correction for Indian English.
 - The Qt shell (under XWayland, for always-on-top) with a transparent WebEngine **Live2D** avatar (sample model), the state machine, RMS lip-sync, TARS personality sliders, and chat.
 - **Exit:** under 1.5 s to first audio on the fast path; STT word error rate ≤ 8% on your recorded commands; PTT interrupt stops speech in under 200 ms; no UI calls from worker threads (enforced by signals).

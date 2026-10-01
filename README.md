@@ -15,8 +15,9 @@ as sending mail or submitting a form.
 Everything runs on-device by default. Cloud models are an opt-in fallback for
 hard tasks, and anything sent to them has personal details redacted first.
 
-> **Status: Phase 0 of 7 complete** (foundation and measurements). TARS is not
-> a usable assistant yet. The v1 prototype in [`legacy/`](legacy/) still runs
+> **Status: Phase 1 in progress.** Phase 0 (foundation and measurements) is done,
+> and you can already talk to TARS: push-to-talk → Whisper → Qwen3.5-4B → Kokoro
+> (`af_heart`). It can't operate the computer yet, and the Live2D avatar is next. The v1 prototype in [`legacy/`](legacy/) still runs
 > in the meantime. See [docs/PLAN.md](docs/PLAN.md) for the design and roadmap.
 
 ---
@@ -75,6 +76,18 @@ This needs Ubuntu with an NVIDIA driver and the CUDA toolkit (`nvcc`), Python
 3.11, cmake, and about 15 GB of disk. Models and binaries go to
 `~/.local/share/tars/`, never into the repo. The setup script is idempotent
 and resumes interrupted downloads.
+
+Talk to it:
+
+```bash
+sudo bash scripts/install_pttd.sh            # once: Right Ctrl push-to-talk (read the script first)
+.venv/bin/python -m tars.voice               # hold Right Ctrl, speak, release
+.venv/bin/python -m tars.voice --ptt stdin   # or: Enter to start/stop, no install needed
+```
+
+`tars-pttd` is a small sandboxed system service that watches only the
+push-to-talk key and reports nothing else. That's why you don't need to join the
+`input` group, which would let every program read every keystroke.
 
 ```bash
 .venv/bin/python -m pytest                  # TARS unit tests

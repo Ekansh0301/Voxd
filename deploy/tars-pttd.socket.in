@@ -1,0 +1,12 @@
+# Installed by scripts/install_pttd.sh. Only @USER@ can connect.
+[Unit]
+Description=TARS push-to-talk key events (socket)
+
+[Socket]
+ListenStream=/run/tars-pttd.sock
+SocketUser=@USER@
+SocketGroup=@USER@
+SocketMode=0600
+
+[Install]
+WantedBy=sockets.target

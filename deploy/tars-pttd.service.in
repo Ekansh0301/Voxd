@@ -1,0 +1,31 @@
+# Installed by scripts/install_pttd.sh. Watches ONE trigger key and reports
+# only down/up/cancel for it; no network, no home directory, no other output.
+[Unit]
+Description=TARS push-to-talk key watcher
+Requires=tars-pttd.socket
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/lib/tars/tars-pttd.py --trigger @TRIGGER@
+DynamicUser=yes
+SupplementaryGroups=input
+DevicePolicy=closed
+DeviceAllow=char-input r
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+Restart=on-failure

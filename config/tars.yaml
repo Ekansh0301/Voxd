@@ -1,0 +1,31 @@
+# TARS settings. Personal overrides go in ~/.config/tars/tars.yaml (same keys).
+
+assistant_name: TARS
+user_name: ""          # how TARS addresses you; empty = no name
+
+personality:           # like the film's settings; change by voice later ("humor 40%")
+  humor: 60            # 0-100
+  honesty: 90          # 0-100: how bluntly it reports failures and uncertainty
+  verbosity: low       # low | medium | high (spoken reply length)
+
+llm:
+  endpoint: http://127.0.0.1:8090/v1   # llama-swap (scripts/gen_llama_swap.sh)
+  brain: brain
+  scout: scout
+  history_turns: 8
+
+voice:
+  ptt:
+    source: pttd                 # pttd (Right Ctrl via tars-pttd) | stdin (Enter key, for testing)
+    socket: /run/tars-pttd.sock
+  stt:
+    model: small.en              # dir under ~/.local/share/tars/models/stt; revisit after your recordings
+    device: cpu
+    compute_type: int8
+    threads: 6
+  tts:
+    engine: kokoro               # kokoro | piper
+    voice: af_heart              # chosen 2026-10-01
+    speed: 1.0
+    kokoro_model: kokoro-v1.0.onnx
+    piper_voice: en_US-lessac-medium   # fallback when Kokoro is unavailable
