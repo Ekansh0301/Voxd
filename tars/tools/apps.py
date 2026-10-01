@@ -8,8 +8,8 @@ reminders through its Local REST API.
 import asyncio
 import difflib
 import subprocess
-import urllib.parse
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 import httpx
@@ -17,14 +17,12 @@ import yaml  # type: ignore[import-untyped]
 
 from tars.agent.policy import check_read, classify_command, resolve
 from tars.agent.tools import Context, Denied, Registry, Tier, obj
-from tars.config import USER
 from tars.perception.atspi import Atspi, Node
 from tars.timeparse import parse_when
 from tars.tools.files import missing
 
 REPO = Path(__file__).resolve().parent.parent.parent
 CONFIG = REPO / "config" / "apps.yaml"
-SECRETS = USER.parent / "secrets.yaml"  # e.g. superproductivity_token: ... (written by you)
 SP_API = "http://127.0.0.1:3876"
 
 
@@ -75,6 +73,27 @@ def launch(ctx: Context, app: App, extra: list[str] | None = None) -> str:
         raise Denied(f"{app.key} is blocked for TARS")
     _spawn(ctx, app.launch + (extra or []), f"launch {app.key} {' '.join(extra or [])}".strip())
     return f"opened {app.key}"
+
+
+async def _sp_up() -> bool:
+    try:
+        async with httpx.AsyncClient(timeout=2) as client:
+            return (await client.get(f"{SP_API}/status")).status_code == 200
+    except httpx.HTTPError:
+        return False
+
+
+def schedule_alarm(at: datetime, title: str) -> bool:
+    """A transient systemd user timer that pops a notification at `at`. It outlives
+    TARS (not a reboot) and shows in `systemctl --user list-timers` as tars-reminder-*."""
+    unit = f"tars-reminder-{int(at.timestamp())}-{abs(hash(title)) % 10000}"
+    r = subprocess.run(
+        ["systemd-run", "--user", "--collect", f"--unit={unit}", f"--description=TARS reminder: {title}",
+         f"--on-calendar={at.astimezone():%Y-%m-%d %H:%M:%S}", "--timer-property=AccuracySec=1s",
+         "notify-send", "--urgency=critical", "--app-name=TARS", "--icon=alarm-symbolic", "Reminder", title],
+        capture_output=True, text=True, timeout=10,
+    )  # fmt: skip
+    return r.returncode == 0
 
 
 def _walk(n: Node):
@@ -136,45 +155,33 @@ def register(reg: Registry, apps: AppRegistry):
         at = parse_when(when) if when else None
         if when and at is None:
             return f"error: couldn't understand the time {when!r}; say e.g. 'tomorrow at 9 am' or 'in 30 minutes'"
-        token = (
-            (yaml.safe_load(SECRETS.read_text()) or {}).get("superproductivity_token")
-            if SECRETS.exists()
-            else None
-        )
         ctx.actions.append(f"reminder {title!r} {at.isoformat() if at else ''}")
+        spoken = f" at {at:%a %d %b, %I:%M %p}" if at else ""
         if not ctx.desktop:
-            return (
-                f"added task {title!r}"
-                + (f" with a reminder at {at:%a %d %b %H:%M}" if at else "")
-                + " (dry run)"
-            )
-        if token:
-            headers = {"Authorization": f"Bearer {token}"}
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.post(
-                    f"{SP_API}/tasks", headers=headers, json={"title": title, "notes": notes}
-                )
-                if r.status_code >= 400:
-                    return f"error: Super Productivity API said {r.status_code}: {r.text[:200]}"
-                task = r.json()
-                task_id = task.get("id") or task.get("data", {}).get("id")
-                if at and task_id:
-                    ms = int(at.timestamp() * 1000)
-                    r = await client.patch(f"{SP_API}/tasks/{task_id}", headers=headers,
-                                           json={"deadlineWithTime": ms, "deadlineRemindAt": ms})  # fmt: skip
-                    if r.status_code >= 400:
-                        return f"added {title!r} but the reminder failed: {r.status_code} {r.text[:150]}"
-            return f"added task {title!r} in Super Productivity" + (
-                f" with a reminder at {at:%a %d %b, %I:%M %p}" if at else ""
-            )
-        # No API token: the URL scheme can create the task, but not set a reminder.
-        url = "superproductivity://create-task?" + urllib.parse.urlencode(
-            {"title": title, "notes": notes}
-        )
-        _spawn(ctx, ["xdg-open", url], f"open {url}")
-        extra = (" I couldn't set the reminder time: enable Super Productivity's local REST API "
-                 "and save its token in ~/.config/tars/secrets.yaml.") if at else ""  # fmt: skip
-        return f"added task {title!r} to Super Productivity.{extra}"
+            return f"added task {title!r}{spoken} (dry run)"
+        if not await _sp_up():
+            launch(ctx, apps.apps["superproductivity"])
+            for _ in range(30):
+                await asyncio.sleep(1)
+                if await _sp_up():
+                    break
+            else:
+                return "error: Super Productivity didn't start, or its local REST API is off (Settings → Misc)"
+        task = {
+            "title": title,
+            "notes": notes,
+            **({"dueWithTime": int(at.timestamp() * 1000)} if at else {}),
+        }
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.post(f"{SP_API}/tasks", json=task)
+        if r.status_code >= 400 or not r.json().get("ok"):
+            return f"error: Super Productivity said {r.status_code}: {r.text[:200]}"
+        if at is None:
+            return f"added task {title!r} in Super Productivity"
+        # The API can't set Super Productivity's own alarm (remindAt), so TARS sets one.
+        if not schedule_alarm(at, title):
+            return f"added {title!r}{spoken} in Super Productivity, but couldn't set the alarm"
+        return f"added {title!r} in Super Productivity{spoken}, with a desktop alarm then"
 
     async def termius_connect(ctx: Context, host: str) -> str:
         app = apps.apps["termius"]

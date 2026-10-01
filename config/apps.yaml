@@ -29,7 +29,7 @@ apps:
     purpose: Tasks and reminders. "Remind me to X at T" adds a task with a reminder; can also sync.
     launch: ["/opt/Super Productivity/superproductivity", --force-renderer-accessibility]
     access: full
-    notes: Reminders use its Local REST API (Settings > Misc > Enable local REST API; token in ~/.config/tars/secrets.yaml).
+    notes: Tasks go in through its Local REST API (Settings > Misc; no token). The API cannot set its alarm, so TARS adds a desktop alarm. Sync is Ctrl+S (needs keyboard input).
 
   ghostty:
     aliases: [ghostty, terminal, shell, console]
