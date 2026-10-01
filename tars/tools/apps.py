@@ -183,6 +183,56 @@ def register(reg: Registry, apps: AppRegistry):
             return f"added {title!r}{spoken} in Super Productivity, but couldn't set the alarm"
         return f"added {title!r} in Super Productivity{spoken}, with a desktop alarm then"
 
+    async def _sp_ready(ctx: Context) -> bool:
+        if await _sp_up():
+            return True
+        launch(ctx, apps.apps["superproductivity"])
+        for _ in range(30):
+            await asyncio.sleep(1)
+            if await _sp_up():
+                return True
+        return False
+
+    async def list_tasks(ctx: Context) -> str:
+        if not ctx.desktop:
+            return "overdue: Return book (due Wed 01 Oct, 10:00 AM)\ntoday: Hisaab\n3 more tasks without a date (dry run)"
+        if not await _sp_ready(ctx):
+            return "error: Super Productivity didn't start, or its local REST API is off (Settings → Misc)"
+        async with httpx.AsyncClient(timeout=10) as client:
+            ids = [
+                t["id"]
+                for t in (await client.get(f"{SP_API}/tasks")).json()["data"]
+                if not t.get("isDone")
+            ]
+            # the list leaves out dates; each task's own record has them
+            tasks = [(await client.get(f"{SP_API}/tasks/{i}")).json()["data"] for i in ids]
+        now = datetime.now().astimezone()
+        today = now.date().isoformat()
+        overdue: list[tuple[str, str]] = []
+        due_today: list[tuple[str, str]] = []
+        upcoming: list[tuple[str, str]] = []
+        undated = 0
+        for t in tasks:
+            title = t.get("title", "?")
+            if t.get("dueWithTime"):
+                at = datetime.fromtimestamp(t["dueWithTime"] / 1000).astimezone()
+                item = (at.isoformat(), f"{title} ({at:%a %d %b, %I:%M %p})")
+                (
+                    overdue if at < now else due_today if at.date() == now.date() else upcoming
+                ).append(item)
+            elif t.get("dueDay"):
+                day = t["dueDay"]
+                item = (day, f"{title} ({datetime.fromisoformat(day):%a %d %b})")
+                (overdue if day < today else due_today if day == today else upcoming).append(item)
+            else:
+                undated += 1
+        lines = []
+        for label, items in (("overdue", overdue), ("today", due_today), ("upcoming", upcoming)):
+            if items:
+                lines.append(f"{label}: " + "; ".join(text for _, text in sorted(items)[:6]))
+        lines.append(f"{undated} more open tasks without a date" if undated else "no undated tasks")
+        return "\n".join(lines)
+
     async def sync_tasks(ctx: Context) -> str:
         from tars.tools.keys import press_keys
 
@@ -190,11 +240,7 @@ def register(reg: Registry, apps: AppRegistry):
         if not ctx.desktop:
             return "synced Super Productivity (dry run)"
         if not await _sp_up():
-            launch(ctx, apps.apps["superproductivity"])
-            for _ in range(30):
-                await asyncio.sleep(1)
-                if await _sp_up():
-                    break
+            await _sp_ready(ctx)
             await asyncio.sleep(2)  # window up after the API
         out = await press_keys(ctx, "ctrl+s", window="super productivity")  # its Sync shortcut
         return out.replace("pressed ctrl+s", "pressed Sync (Ctrl+S)")
@@ -241,4 +287,6 @@ def register(reg: Registry, apps: AppRegistry):
     reg.tool(
         "sync_tasks", "Sync Super Productivity (its Sync button).", tier=Tier.T1, speak="Syncing"
     )(sync_tasks)
+    reg.tool("list_tasks", "The user's open tasks in Super Productivity: overdue, today, upcoming. "
+             "Use for 'what's my next task', 'anything overdue?'.", speak="Checking your tasks")(list_tasks)  # fmt: skip
     reg.tool("list_apps", "The user's apps and what each is for.")(list_apps)

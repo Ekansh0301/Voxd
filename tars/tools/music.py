@@ -16,6 +16,7 @@ stored next to them.
 """
 
 import asyncio
+import contextlib
 import difflib
 import json
 import re
@@ -27,7 +28,8 @@ import websockets
 
 from tars.agent.tools import Context, Registry, Tier, obj
 from tars.perception.keyboard import InputError, Keyboard
-from tars.perception.windows import NoExtension, activate, list_windows
+from tars.perception.screenshot import take_screenshot
+from tars.perception.windows import NoExtension, Window, activate, list_windows
 from tars.perception.windows import find as find_window
 
 DB = Path.home() / ".local/share/spotube/db.sqlite"
@@ -127,12 +129,20 @@ def now_playing() -> tuple[str, str, bool]:
             "Playing" in get("PlaybackStatus"))  # fmt: skip
 
 
-# Spotube's layout, in window pixels (checked at 1853x1048): sidebar "Search", the
-# search box, the first song row, and "Play next" in the row's menu (right-anchored).
-SEARCH_ITEM = (79, 110)
+# Spotube's layout in window pixels (measured maximized at 1853x1048; the sidebar and
+# lists are anchored top-left, dialogs to the window centre).
+SEARCH_ITEM = (79, 110)  # sidebar "Search"
+PLAYLISTS_ITEM = (83, 283)  # sidebar Library > "Playlists"
 SEARCH_BOX_Y = 61
-FIRST_ROW = (330, 177)
-PLAY_NEXT = (-146, 270)  # x from the window's right edge
+FIRST_ROW = (330, 177)  # first song in search results (title)
+ROW_THUMB = (251, 157, 291, 197)  # its album art
+ROW_TEXT = (300, 160, 700, 195)  # its title/artist text
+FILTER_BOX = (300, 65)  # Library > Playlists "Filter your playlists..."
+FIRST_TILE = (277, 232)  # first playlist tile
+TILE_ART = (212, 160, 344, 300)
+TILE_PLAY = (325, 288)  # the play button shown on hover
+DIALOG_OK = (163, 41)  # "Ok" of the clear-the-queue dialog, from the window centre
+SIDEBAR = (20, 60, 190, 200)  # dims when a dialog is open
 MIN_SIZE = (1100, 700)
 
 
@@ -142,68 +152,217 @@ def _matches(query: str, title: str, artist: str) -> bool:
     return bool(want) and sum(w in got for w in want) >= max(1, len(want) // 2 + len(want) % 2)
 
 
-async def play_by_search(ctx: Context, query: str) -> str:
-    """Search Spotube for `query` and play the top result next (queue kept)."""
-    ctx.actions.append(f"spotube search {query!r}")
-    if not ctx.desktop:
-        return f"playing the top Spotube result for {query!r} (dry run)"
-    try:
+def _stats(img, box) -> tuple[float, float]:
+    """(mean, spread) of brightness in a region: art and text have spread, empty bg not."""
+    from PIL import ImageStat
+
+    st = ImageStat.Stat(img.crop(box).convert("L"))
+    return st.mean[0], st.stddev[0]
+
+
+def _diff(a, b, box) -> float:
+    from PIL import ImageChops, ImageStat
+
+    return float(
+        ImageStat.Stat(ImageChops.difference(a.crop(box), b.crop(box)).convert("L")).mean[0]
+    )
+
+
+class Spotube:
+    """Drive Spotube's window: focus, click by layout, look via screenshots."""
+
+    win: Window  # set on entry
+
+    def __init__(self, ctx: Context):
+        self.ctx = ctx
+        self.before: Window | None = None  # the window the user was in
+
+    async def __aenter__(self) -> "Spotube":
         wins = await list_windows()
-        before = next((w for w in wins if w.focused), None)
+        self.before = next((w for w in wins if w.focused), None)
         win = find_window("spotube", wins)
         if win is None:
             subprocess.Popen(["spotube"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                              start_new_session=True)  # fmt: skip
-            for _ in range(30):
-                await asyncio.sleep(1)
-                if win := find_window("spotube", await list_windows()):
+            for _ in range(60):
+                await asyncio.sleep(0.5)
+                if find_window("spotube", await list_windows()):
                     break
             else:
-                return "error: Spotube didn't open"
-            await asyncio.sleep(3)  # let it finish loading its home page
-        if win.width < MIN_SIZE[0] or win.height < MIN_SIZE[1]:
-            return (
-                "error: the Spotube window is too small for TARS to use; maximize it and ask again"
-            )
-        await activate(win)
-        await asyncio.sleep(0.4)
-        win = find_window("spotube", await list_windows())
-        if win is None or not win.focused:
-            return "error: couldn't bring Spotube to the front"
-        x0, y0 = win.x, win.y
-        async with Keyboard() as kb:
-            await kb.click(x0 + SEARCH_ITEM[0], y0 + SEARCH_ITEM[1])
-            await asyncio.sleep(0.7)
-            await kb.click(x0 + win.width // 2, y0 + SEARCH_BOX_Y)
-            await kb.combo("ctrl+a")
-            await kb.type(query)
-            await kb.combo("Enter")
-            await asyncio.sleep(2.5)  # results load from the network
-            now = find_window("spotube", await list_windows())
-            if now is None or not now.focused:  # the user switched away: don't click blindly
-                return "error: Spotube lost focus while searching; nothing was played"
-            await kb.click(x0 + FIRST_ROW[0], y0 + FIRST_ROW[1], button="right")
-            await asyncio.sleep(0.8)
-            await kb.click(x0 + win.width + PLAY_NEXT[0], y0 + PLAY_NEXT[1])
-            await asyncio.sleep(0.6)
-        _mpris("Next")
-        title = artist = ""
-        for _ in range(10):
-            await asyncio.sleep(1)
-            title, artist, playing = now_playing()
-            if playing and _matches(query, title, artist):
+                raise InputError("Spotube didn't open")
+        # It opens small, then maximizes: wait until its size has settled.
+        last = None
+        for _ in range(16):
+            win = find_window("spotube", await list_windows())
+            if win and last and (win.x, win.y, win.width, win.height) == last:
                 break
-        if before is not None and before.id != win.id:
-            await activate(before)  # back to what the user was doing
-    except NoExtension as e:
-        return f"error: {e}"
-    except InputError as e:
+            last = win and (win.x, win.y, win.width, win.height)
+            await asyncio.sleep(0.5)
+        if win is None:
+            raise InputError("Spotube's window disappeared")
+        if win.width < MIN_SIZE[0] or win.height < MIN_SIZE[1]:
+            raise InputError("the Spotube window is too small for TARS; maximize it and ask again")
+        await self.focus(win)
+        self.kb = Keyboard()
+        await self.kb.__aenter__()
+        return self
+
+    async def __aexit__(self, *exc):
+        await self.kb.__aexit__(*exc)
+        if self.before is not None and self.before.id != self.win.id:
+            with contextlib.suppress(Exception):
+                await activate(self.before)  # back to what the user was doing
+
+    async def focus(self, win: Window | None = None) -> None:
+        win = win or find_window("spotube", await list_windows())
+        if win and not win.focused:
+            await activate(win)
+            await asyncio.sleep(0.4)
+            win = find_window("spotube", await list_windows())
+        if win is None or not win.focused:
+            raise InputError("couldn't bring Spotube to the front; nothing was clicked")
+        self.win = win
+
+    async def click(self, at: tuple[int, int], **kw) -> None:
+        await self.focus()  # never click into another window
+        await self.kb.click(self.win.x + at[0], self.win.y + at[1], **kw)
+
+    async def snap(self):
+        from PIL import Image
+
+        path = await take_screenshot()
+        try:
+            img = Image.open(path)
+            w = self.win
+            return img.crop((w.x, w.y, w.x + w.width, w.y + w.height)).copy()
+        finally:
+            path.unlink(missing_ok=True)
+
+    async def confirm_dialog(self, before) -> bool:
+        """If a dialog dimmed the window (clear-the-queue), press its Ok."""
+        await asyncio.sleep(0.9)
+        after = await self.snap()
+        if _stats(after, SIDEBAR)[0] < 0.75 * _stats(before, SIDEBAR)[0]:
+            await self.click(
+                (self.win.width // 2 + DIALOG_OK[0], self.win.height // 2 + DIALOG_OK[1])
+            )
+            return True
+        return False
+
+
+async def _wait_playing(changed_from: str, query: str = "") -> tuple[str, str]:
+    title = artist = ""
+    for _ in range(12):
+        await asyncio.sleep(1)
+        title, artist, playing = now_playing()
+        if playing and (_matches(query, title, artist) if query else title != changed_from):
+            break
+    return title, artist
+
+
+async def play_by_search(ctx: Context, query: str) -> str:
+    """Search Spotube and play the top song (Spotube may clear the queue; Ok)."""
+    ctx.actions.append(f"spotube search {query!r}")
+    if not ctx.desktop:
+        return f"playing the top Spotube result for {query!r} (dry run)"
+    try:
+        async with Spotube(ctx) as sp:
+            await sp.click(SEARCH_ITEM)
+            await asyncio.sleep(0.8)
+            await sp.click((sp.win.width // 2, SEARCH_BOX_Y))
+            await sp.kb.combo("ctrl+a")
+            await sp.kb.type(query)
+            old = await sp.snap()  # results of an earlier search may still be showing
+            await sp.focus()
+            await sp.kb.combo("Enter")
+            for _ in range(12):  # wait for this query's results
+                await asyncio.sleep(0.7)
+                now = await sp.snap()
+                if _stats(now, ROW_THUMB)[1] > 18 and (
+                    _diff(old, now, ROW_TEXT) > 4 or _stats(old, ROW_THUMB)[1] <= 18
+                ):
+                    break
+            else:
+                if _stats(now, ROW_THUMB)[1] <= 18:
+                    return f"error: Spotube showed no songs for {query!r}"
+            before = now
+            await sp.click(FIRST_ROW)
+            asked = await sp.confirm_dialog(before)
+            title, artist = await _wait_playing("", query)
+    except (NoExtension, InputError) as e:
         return f"error: {e}"
     if not title:
-        return "error: Spotube didn't start playing; check its window"
+        return "error: Spotube didn't start playing; don't retry, tell the user"
+    note = " (Spotube replaced the queue)" if asked else ""
     if not _matches(query, title, artist):
-        return f"played {title} by {artist}, which may not be what was asked for"
-    return f"playing {title} by {artist} in Spotube (your queue is kept)"
+        return f"played {title} by {artist}, the top result for {query!r}; it may not be the one meant. Don't retry{note}"
+    return f"playing {title} by {artist} in Spotube{note}"
+
+
+def _current_playlist() -> str:
+    """Name of the playlist Spotube's queue came from, via its history (best effort)."""
+    try:
+        with _db() as c:
+            row = c.execute("select collections from audio_player_state_table limit 1").fetchone()
+            cid = (row[0] or "").split(",")[0] if row else ""
+            for (data,) in c.execute(
+                "select data from history_table where type = 'playlist' order by created_at desc"
+            ):
+                d = json.loads(data)
+                if cid and cid in (d.get("id"), d.get("externalUri", "")):
+                    return str(d.get("name", ""))
+    except (sqlite3.Error, json.JSONDecodeError):
+        pass
+    return ""
+
+
+GENERIC = {"my", "the", "a", "playlist", "playlists", "songs", "song", "music", "tracks", "please"}
+
+
+def filter_words(name: str) -> str:
+    """'my liked songs playlist' -> 'liked': generic words make Spotube's fuzzy filter
+    match the wrong playlist ('songs' matched 'Best English Songs', not 'Liked Tracks')."""
+    words = [w for w in _norm(name).split() if w not in GENERIC]
+    return " ".join(words) or name
+
+
+async def play_playlist(ctx: Context, name: str) -> str:
+    """Library > Playlists, filter by name, play the first match."""
+    name = filter_words(name)
+    ctx.actions.append(f"spotube playlist {name!r}")
+    if not ctx.desktop:
+        return f"playing the playlist {name!r} (dry run)"
+    try:
+        async with Spotube(ctx) as sp:
+            playing_before = now_playing()[0]
+            await sp.click(PLAYLISTS_ITEM)
+            await asyncio.sleep(1.0)
+            await sp.click(FILTER_BOX)
+            await sp.kb.combo("ctrl+a")
+            await sp.kb.type(name)
+            await asyncio.sleep(1.0)
+            prev = await sp.snap()
+            for _ in range(12):  # wait until the filtered list has loaded and stopped changing
+                await asyncio.sleep(0.6)
+                img = await sp.snap()
+                if _stats(img, TILE_ART)[1] > 18 and _diff(prev, img, TILE_ART) < 2:
+                    break
+                prev = img
+            else:
+                if _stats(img, TILE_ART)[1] <= 18:
+                    return f"error: no playlist matching {name!r} in the library"
+            await sp.focus()
+            await sp.kb.move_to(sp.win.x + FIRST_TILE[0], sp.win.y + FIRST_TILE[1])
+            await asyncio.sleep(0.6)  # its play button appears on hover
+            await sp.click(TILE_PLAY)
+            await sp.confirm_dialog(img)
+            title, artist = await _wait_playing(playing_before)
+    except (NoExtension, InputError) as e:
+        return f"error: {e}"
+    if not title or title == playing_before:
+        return "error: the playlist didn't start; don't retry, tell the user"
+    which = _current_playlist()
+    return f"playing the playlist {which or name!r}: {title} by {artist}"
 
 
 def _listening_ports() -> list[int]:
@@ -224,9 +383,11 @@ def load_event(tracks: list[dict], index: int) -> dict:
             "data": {"runtimeType": "playlist", "tracks": tracks, "collection": None, "initialIndex": index}}  # fmt: skip
 
 
-async def play_music(ctx: Context, song: str = "") -> str:
+async def play_music(ctx: Context, song: str = "", playlist: str = "") -> str:
     if not DB.exists():
         return "error: Spotube isn't set up on this laptop"
+    if playlist:
+        return await play_playlist(ctx, playlist)
     if _norm(song) in ANY_SONG:
         ctx.actions.append("spotube resume")
         if ctx.desktop and not _mpris_play():
@@ -256,9 +417,9 @@ async def play_music(ctx: Context, song: str = "") -> str:
 def register(reg: Registry):
     reg.tool(
         "play_music",
-        "Play any song in Spotube: 'Believer', 'death bed by Powfu'. "
-        "Leave song empty to just resume music. Pause/next/previous: media_control.",
-        obj([], song={"type": "string"}),
+        "Play music in Spotube: a song ('Believer', 'death bed by Powfu') or one of the user's "
+        "playlists ('phonk', 'liked songs'). Both empty = resume. Pause/next/previous: media_control.",
+        obj([], song={"type": "string"}, playlist={"type": "string"}),
         tier=Tier.T1,
         speak="Playing",
     )(play_music)

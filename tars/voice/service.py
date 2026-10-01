@@ -33,7 +33,8 @@ log = logging.getLogger("tars.voice")
 
 def _brief(args: dict) -> str:
     """Tool args for the history note, long values cut ('text': 'Dear …')."""
-    return ", ".join(f"{k}={str(v)[:40]!r}" for k, v in args.items())
+    return ", ".join(f"{k}={str(v)[:120 if k in ('path', 'source', 'destination', 'url') else 40]!r}"
+                     for k, v in args.items())  # fmt: skip
 
 
 IDLE, LISTENING, THINKING, SPEAKING, CONFIRMING = (

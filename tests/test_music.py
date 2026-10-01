@@ -94,3 +94,10 @@ def test_matches():
     assert music._matches("Believer", "Believer", "Imagine Dragons")
     assert music._matches("death bed by powfu", "death bed (coffee for your head)", "Powfu")
     assert not music._matches("Believer", "Subhanallah", "Pritam")
+
+
+def test_playlist_filter_words():
+    assert music.filter_words("liked songs") == "liked"
+    assert music.filter_words("my old songs playlist") == "old"
+    assert music.filter_words("phonk") == "phonk"
+    assert music.filter_words("Hype Motivation Mix") == "hype motivation mix"
