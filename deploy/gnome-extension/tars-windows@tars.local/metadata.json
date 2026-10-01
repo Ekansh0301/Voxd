@@ -1,0 +1,7 @@
+{
+  "uuid": "tars-windows@tars.local",
+  "name": "TARS windows",
+  "description": "Lets the local TARS assistant list open windows and focus one, over D-Bus (org.tars.Windows). Nothing else.",
+  "shell-version": ["50"],
+  "version": 1
+}

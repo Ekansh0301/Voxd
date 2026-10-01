@@ -183,6 +183,22 @@ def register(reg: Registry, apps: AppRegistry):
             return f"added {title!r}{spoken} in Super Productivity, but couldn't set the alarm"
         return f"added {title!r} in Super Productivity{spoken}, with a desktop alarm then"
 
+    async def sync_tasks(ctx: Context) -> str:
+        from tars.tools.keys import press_keys
+
+        ctx.actions.append("superproductivity sync")
+        if not ctx.desktop:
+            return "synced Super Productivity (dry run)"
+        if not await _sp_up():
+            launch(ctx, apps.apps["superproductivity"])
+            for _ in range(30):
+                await asyncio.sleep(1)
+                if await _sp_up():
+                    break
+            await asyncio.sleep(2)  # window up after the API
+        out = await press_keys(ctx, "ctrl+s", window="super productivity")  # its Sync shortcut
+        return out.replace("pressed ctrl+s", "pressed Sync (Ctrl+S)")
+
     async def termius_connect(ctx: Context, host: str) -> str:
         app = apps.apps["termius"]
         ctx.actions.append(f"termius connect {host}")
@@ -222,4 +238,7 @@ def register(reg: Registry, apps: AppRegistry):
              tier=Tier.T1)(add_reminder)  # fmt: skip
     reg.tool("termius_connect", "Open Termius and connect to one of the user's saved hosts (e.g. ada, turing).",
              obj(["host"], host={"type": "string"}), tier=Tier.T1, speak="Connecting")(termius_connect)  # fmt: skip
+    reg.tool(
+        "sync_tasks", "Sync Super Productivity (its Sync button).", tier=Tier.T1, speak="Syncing"
+    )(sync_tasks)
     reg.tool("list_apps", "The user's apps and what each is for.")(list_apps)

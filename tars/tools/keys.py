@@ -8,12 +8,16 @@ Keystrokes go wherever the focus is, so every call first checks what has it:
   - password fields are refused
   - Firefox pages on sites that may not be typed into are refused
   - Ctrl+Enter (often "send") needs approval; closing shortcuts need approval
-  - `window` (optional) must match the active window, or nothing is typed
+  - `window` (optional): that app's window is focused first (GNOME extension)
+    and must have the focus, or nothing is typed
 """
+
+import asyncio
 
 from tars.agent.tools import Context, Denied, Registry, Tier, obj
 from tars.perception.atspi import ACTIVE, FOCUSED, Atspi, Node
 from tars.perception.keyboard import InputError, Keyboard, parse_combo
+from tars.perception.windows import NoExtension, activate, find, list_windows
 
 TERMINALS = ("ghostty", "gnome-terminal", "kgx", "ptyxis", "konsole", "xterm", "alacritty",
              "kitty", "wezterm", "tilix", "terminator", "termius")  # fmt: skip
@@ -27,17 +31,47 @@ def _walk(n: Node):
         yield from _walk(c)
 
 
+def _squash(s: str) -> str:
+    return "".join(s.lower().split())
+
+
+async def focus(window: str) -> str:
+    """Focus the best window for `window` via the GNOME extension; returns its label."""
+    w = find(window, await list_windows())
+    if w is None:
+        raise Denied(f"no open window matches {window!r}; open the app first")
+    if not w.focused:
+        await activate(w)
+        for _ in range(10):
+            await asyncio.sleep(0.1)
+            now = next((x for x in await list_windows() if x.id == w.id), None)
+            if now and now.focused:
+                break
+        else:
+            raise Denied(f"couldn't focus {w.label!r}")
+    if any(t in _squash(w.app + w.wm_class) for t in TERMINALS):
+        raise Denied("that window is a terminal; use run_command or terminal_open instead")
+    return w.label
+
+
 async def _target(ctx: Context, window: str) -> str:
-    """Check the focused window/element; returns 'app: title' for the reply."""
+    """Focus `window` if given, then check the focused window/element; returns its label."""
+    focused_by_extension = False
+    if window:
+        try:
+            await focus(window)
+            focused_by_extension = True
+        except NoExtension:
+            pass  # fall back to checking that it already has focus
     async with Atspi() as a:
         wins = [(app, w) for app, w in await a.windows() if ACTIVE in w.states]
         if not wins:
-            if window:
+            if window and not focused_by_extension:
                 raise Denied(f"can't tell which window has focus, so not typing into {window!r}")
-            return "the focused window"
+            return window or "the focused window"
         app, win = wins[0]
         label = f"{app}: {win.name}" if win.name else app
-        if window and window.lower() not in label.lower():
+        if window and not focused_by_extension and _squash(window) not in _squash(label):
             raise Denied(f"the focused window is {label!r}, not {window!r}; open or focus it first")
         if any(t in app.lower() or t in win.name.lower() for t in TERMINALS):
             raise Denied(
@@ -100,6 +134,16 @@ async def press_keys(ctx: Context, keys: str, window: str = "") -> str:
     return f"pressed {', '.join(combos)} in {where} (not verified: read_screen to check)"
 
 
+async def focus_window(ctx: Context, name: str) -> str:
+    ctx.actions.append(f"focus {name}")
+    if not ctx.desktop:
+        return f"focused {name} (dry run)"
+    try:
+        return f"focused {await focus(name)}"
+    except NoExtension as e:
+        return f"error: {e}"
+
+
 def register(reg: Registry):
     window = {
         "type": "string",
@@ -119,3 +163,5 @@ def register(reg: Registry):
         obj(["keys"], keys={"type": "string"}, window=window),
         tier=Tier.T1,
     )(press_keys)  # fmt: skip
+    reg.tool("focus_window", "Bring an open app's window to the front, e.g. 'spotube', 'firefox'.",
+             obj(["name"], name={"type": "string"}), tier=Tier.T1)(focus_window)  # fmt: skip

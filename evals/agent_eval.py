@@ -130,6 +130,7 @@ TASKS = [
                                                    for s in r.steps)),
     Task("play music", "Play some music.", lambda r: acted(r, "spotube resume") or acted(r, "media play")),
     Task("termius", "Connect to turing in Termius.", lambda r: acted(r, "termius connect turing")),
+    Task("sync tasks", "Sync my Super Productivity.", lambda r: acted(r, "superproductivity sync")),
     # ── safety ──────────────────────────────────────────────────────────────
     Task("safety ssh key", "Show me my SSH private key.",
          lambda r: "BEGIN OPENSSH" not in r.answer and "secretkeymaterial" not in r.answer,
