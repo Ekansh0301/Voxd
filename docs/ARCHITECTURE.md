@@ -14,7 +14,7 @@ flowchart LR
   pttd -- down/up --> voice
   mic --> voice
   subgraph tars["tars (python -m tars.voice)"]
-    voice["voice service<br/>Whisper STT (GPU) · Kokoro TTS (CPU)"] --> agent["agent loop<br/>56 tools · policy · approvals"]
+    voice["voice service<br/>Whisper STT (GPU) · Kokoro TTS (CPU)"] --> agent["agent loop<br/>59 tools · routines · policy · approvals"]
   end
   agent -- chat + tools --> swap["llama-swap :8090<br/>Qwen3.5-4B on the GPU<br/>(vision projector on CPU)"]
   voice <-- "WebSocket :8765<br/>(token)" --> ui["avatar window (Qt, XWayland)<br/>Live2D · subtitles · text box<br/>top-bar icon · control border"]
@@ -28,12 +28,13 @@ flowchart LR
 |---|---|
 | `tars/voice/` | Push-to-talk, recording, Whisper `small.en` on the GPU, Kokoro `af_heart` TTS streamed sentence by sentence, the turn loop, approvals, the kill switch |
 | `tars/agent/` | The tool registry, permission tiers, the command policy, and the agent loop (native tool calling, up to 12 steps, loop detection, context budgeting) |
-| `tars/tools/` | The tools themselves; [TOOLS.md](TOOLS.md) lists all 56 |
+| `tars/tools/` | The tools themselves; [TOOLS.md](TOOLS.md) lists all 59 |
 | `tars/perception/` | AT-SPI (accessibility trees over D-Bus), the Screenshot and RemoteDesktop portals, the window and VS Code clients |
 | `tars/ui/` | The avatar window, its message bus, and the Live2D build |
 | `tars/llm/` | Streaming chat client, llama-swap start-up, prompt-cache priming |
 | `tars/mcp/` | A small MCP client and manager (used for the Firefox drivers) |
 | `tars/memory/` | SQLite with full-text search: facts you told TARS and past turns |
+| `tars/skills/` | Learned routines (finished tasks, with the request's words as slots) and routines you teach by name |
 | `deploy/` | The GNOME Shell extension, the VS Code extension, the pttd systemd units, templates |
 
 The second model in `config/tars.yaml` (`scout`, Qwen3.5-0.8B on the CPU) is set up
@@ -43,13 +44,18 @@ and benchmarked but not used yet; it's reserved for Phase 4's helper agents.
 
 1. Right Ctrl is released (or Enter in the text box). The recording goes to
    Whisper (~0.5 s).
-2. Settings commands ("humor 40%") and unambiguous ones ("pause the music") are
-   handled directly, without the model.
-3. Otherwise the model gets the system prompt, the 56 tool descriptions, recent
+2. A routine you taught ("study mode") runs its requests in order. Settings
+   commands ("humor 40%") and unambiguous ones ("pause the music") are handled
+   directly, without the model.
+3. Otherwise the model gets the system prompt, the 59 tool descriptions, recent
    history and the new message, with the current time and any remembered facts.
-4. It answers or calls tools. Each call passes the **policy** first (tier,
+4. If a learned routine fits the request, its steps run first, as if the model had
+   proposed them; the model then only writes the answer, or carries on if a step
+   failed. A successful multi-step turn is saved as a routine for next time.
+5. It answers or calls tools. Each call passes the **policy** first (tier,
    site rules, sandbox) and may ask you. Results go back labelled as data.
-5. Its words are spoken as they stream in, and shown as subtitles.
+6. Its words are spoken as they stream in, and shown as subtitles; each step shows
+   in the window's task list.
 
 **Speed comes from the prompt cache.** The system prompt and tool list (~4,200
 tokens) take ~10 s to process cold, so they're kept byte-identical between turns
@@ -88,5 +94,5 @@ After a click or typing, TARS re-reads the window and gets told what changed.
 |---|---|
 | `config/` | Defaults: `tars.yaml` (voice, models, personality), `sites.yaml` (per-site access), `apps.yaml` (your apps), `mcp.json` |
 | `~/.config/tars/` | Your overrides (`tars.yaml` is merged over the default), `llama-swap.yaml` |
-| `~/.local/share/tars/` | Models, binaries (`opt/`), the avatar build, `memory.db`, `logs/`, edit `backups/`, the keyboard approval token, `recordings/` (only with `--save-audio`) |
+| `~/.local/share/tars/` | Models, binaries (`opt/`), the avatar build, `memory.db`, `skills.db` (routines), `logs/`, edit `backups/`, the keyboard approval token, `recordings/` (only with `--save-audio`) |
 | `$XDG_RUNTIME_DIR/tars-vscode-*.sock` | The VS Code bridge, one per window |

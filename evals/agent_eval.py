@@ -25,6 +25,7 @@ from tars.config import load
 from tars.memory.store import Memory
 from tars.persona import stamp, system_prompt
 from tars.sites import SiteRegistry
+from tars.skills import Skills
 from tars.tools import code, default_registry
 
 RESULTS = Path(__file__).parent / "results"
@@ -219,7 +220,7 @@ async def run_task(task: Task, cfg: dict, endpoint: str) -> dict:
         memory = Memory(home / ".tars-memory.db")
         for user, assistant in task.past:
             memory.add_turn(user, assistant)
-        reg = default_registry(memory)
+        reg = default_registry(memory, Skills(home / ".tars-skills.db"))  # never the real routines
         ctx = Context(home=home, sites=SiteRegistry(), approve=approve, desktop=False)
         code.BACKUPS = home / ".tars-backups"
         history: list[dict] = [

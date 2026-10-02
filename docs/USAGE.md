@@ -43,6 +43,20 @@ Drag the avatar with the left mouse button.
 | Research | "Look up the latest stable Python version" (a hidden browser; your Firefox isn't touched) |
 | System | "Set the volume to 30", "How much disk space do I have?", "What's using the most CPU?", "Set a timer for 10 minutes" |
 | Memory | "Remember that my favourite editor is VS Code", "What's my favourite editor?" |
+| Routines | "Make a routine called study mode that…", "study mode", "What routines do you have?" |
+
+## Routines
+
+- **Learned:** when a multi-step task works, TARS remembers how it did it. The next
+  similar request ("switch Super Productivity to Today" after "...to Planner") replays
+  those steps directly, about 3× faster for desktop tasks; the model only writes the
+  answer, and takes over if a step fails. A routine that keeps failing is retired.
+- **Taught:** "Make a routine called study mode that opens my project in VS Code,
+  plays my phonk playlist and sets the volume to 30." Then just say "study mode".
+- "What routines do you have?", "Forget the study mode routine".
+
+While TARS works, the window under the avatar lists each step: ⏳ running, ✓ done,
+✗ failed, and ↻ for steps replayed from a routine.
 
 ## Things TARS won't do
 

@@ -1,6 +1,6 @@
 # Status
 
-Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-10-02.
+Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-10-02 (night).
 
 | Phase | | |
 |---|---|---|
@@ -8,7 +8,7 @@ Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-1
 | 1. Voice and avatar | ✅ done (one item open) | key release → first speech ~1.6 s; STT model choice waits for your recordings |
 | 2. Agent core and MCP | ✅ done | 56 tools, policy, approvals, memory |
 | 3. Screen reading and control | ✅ done | live eval 11/12 (target ≥ 65%) |
-| 4. Multi-agent, recursion, skills | not started | |
+| 4. Multi-agent, recursion, skills | ✅ routines done; helper agents proposed to skip | long tasks 6/6, routine replays 4/4 |
 | 5. Capabilities (mail, forms, cloud) | next: Outlook drafting | research is done early |
 | 6. Proactive monitoring | not started | |
 | 7. Hardening and learning | ongoing | |
@@ -55,6 +55,25 @@ Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-1
 - **Not done, by choice:** the Playwright browser (the headless Firefox does the job
   with no new install), YOLO/Set-of-Mark detection (OCR + vision boxes were enough),
   and a separate `tars-desktop` MCP server.
+
+## Phase 4: learned routines
+
+- **Learned routines:** a successful multi-step task is saved with the words of the
+  request as slots, and replayed for a matching request: the steps run directly
+  (same policy and approvals), the model only writes the answer or takes over after
+  a failed step. Saved only when safe: no paraphrased or request-derived values, no
+  content edits. Retired after repeated failures.
+- **Taught routines:** "make a routine called study mode that…", run by saying its name.
+- **Task view:** the window lists each step live (running, done, failed, replayed).
+- **Results:** long tasks 6/6 (target ≥ 55%); routine replays 4/4 correct (target ≥ 90%),
+  3.4–3.5× faster for a desktop task (target ≥ 3×), 1.3–1.5× for ChatGPT questions,
+  where ChatGPT's own answer time dominates.
+- **Proposed to skip** (your call): the Conductor with specialist agents, and per-role
+  prompt caches. On this GPU there is one prompt cache, and each role's ~4k-token prompt
+  takes ~10 s to load, so switching roles would cost far more than it saves; the single
+  agent already passes the long-task target. Teach-by-demonstration (recording your
+  clicks) is also deferred: taught-by-voice routines cover most of it, and recording
+  only works in apps that expose accessibility events.
 
 ## Waiting on you
 
