@@ -34,7 +34,7 @@ log = logging.getLogger("tars.voice")
 # screen shows the control border, and a tap of Right Ctrl stops everything.
 CONTROL_TOOLS = {"type_text", "press_keys", "focus_window", "click", "click_sequence", "type_into",
                  "web_click", "web_fill", "web_type", "web_key", "play_music", "sync_tasks",
-                 "termius_connect"}  # fmt: skip
+                 "termius_connect", "click_on_screen"}  # fmt: skip
 TAP_SECONDS = 0.45  # shorter than this, a press is a stop, not speech
 
 
