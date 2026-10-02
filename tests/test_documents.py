@@ -24,4 +24,7 @@ def test_chunks_split_long_text():
 def test_plain_speech_text():
     from tars.voice.service import _plain
 
-    assert _plain("- **Speed**: UDP is faster — TCP is `reliable`") == "Speed: UDP is faster, TCP is reliable"
+    assert (
+        _plain("- **Speed**: UDP is faster — TCP is `reliable`")
+        == "Speed: UDP is faster, TCP is reliable"
+    )

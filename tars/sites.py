@@ -43,6 +43,7 @@ class Site:
     purpose: str = ""
     web_ai: bool = False
     limits: dict = field(default_factory=dict)
+    shortcuts: dict = field(default_factory=dict)  # action -> URL template with {q}
     notes: str = ""
 
 

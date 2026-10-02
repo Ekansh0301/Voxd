@@ -26,6 +26,12 @@ sites:
     category: dev
     purpose: Repos, issues, pull requests, CI status.
     access: full
+    shortcuts:
+      notifications: "https://github.com/notifications"
+      repo: "https://github.com/{q}"
+      search: "https://github.com/search?q={q}&type=repositories"
+      pulls: "https://github.com/pulls"
+      issues: "https://github.com/issues"
     notes: Pushing, merging, commenting or creating anything is Tier 3.
 
   youtube:
@@ -35,6 +41,11 @@ sites:
     category: media
     purpose: Search and play videos and music.
     access: full
+    shortcuts:
+      search: "https://www.youtube.com/results?search_query={q}"
+      play: "https://www.youtube.com/results?search_query={q}"
+      subscriptions: "https://www.youtube.com/feed/subscriptions"
+      history: "https://www.youtube.com/feed/history"
 
   chatgpt:
     url: https://chatgpt.com/
@@ -93,6 +104,8 @@ sites:
     category: reference
     purpose: Quick syntax references.
     access: navigate
+    shortcuts:
+      topic: "https://quickref.me/{slug}"
 
   leetcode:
     url: https://leetcode.com/explore/
@@ -101,6 +114,10 @@ sites:
     category: practice
     purpose: Coding practice. TARS can open problems; solving and submitting is yours.
     access: navigate
+    shortcuts:
+      problem: "https://leetcode.com/problems/{slug}/"
+      search: "https://leetcode.com/problemset/?search={q}"
+      problems: "https://leetcode.com/problemset/"
 
   monkeytype:
     url: https://monkeytype.com/
@@ -133,6 +150,11 @@ sites:
     category: social
     purpose: Professional network.
     access: navigate
+    shortcuts:
+      notifications: "https://www.linkedin.com/notifications/"
+      messages: "https://www.linkedin.com/messaging/"
+      search: "https://www.linkedin.com/search/results/all/?keywords={q}"
+      jobs: "https://www.linkedin.com/jobs/"
     notes: Posting, messaging, connecting or applying would be Tier 3 if access is raised.
 
   # ── College sites: never accessed by TARS ──────────────────────────────────

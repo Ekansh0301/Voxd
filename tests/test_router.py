@@ -50,3 +50,21 @@ def test_routes(text, tool, args):
 )
 def test_leaves_anything_more_to_the_agent(text):
     assert match(text, SITES) is None
+
+
+def test_youtube_routes():
+    from tars.router import match
+    from tars.sites import SiteRegistry
+
+    r = match("Play lofi beats on YouTube", SiteRegistry())
+    assert r.tool == "open_site" and r.args == {
+        "site": "youtube",
+        "action": "play",
+        "query": "lofi beats",
+    }
+    r = match("search youtube for linux tutorials", SiteRegistry())
+    assert r.args["action"] == "search" and r.args["query"] == "linux tutorials"
+    assert (
+        match("play lofi beats", SiteRegistry()) is None
+        or match("play lofi beats", SiteRegistry()).tool != "open_site"
+    )

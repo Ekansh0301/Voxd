@@ -1,7 +1,7 @@
 # TARS tools
 
 Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
-63 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
+64 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
 
 | Tier | Meaning |
 |---|---|
@@ -46,7 +46,7 @@ Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
 | `media_control` | T1 | Control music/video playback in any player. | `action` |
 | `notify` | T1 | Show a desktop notification. | `message` |
 | `open_app` | T1 | Launch an installed desktop application by name. | `name` |
-| `open_url` | T1 | Open a website in Firefox: a URL or a known site name (outlook, youtube, github...). | `url` |
+| `open_url` | T1 | Open a website in Firefox: a URL or a known site name (outlook, youtube, github...). To search or play something on the user's sites, use open_site instead. | `url` |
 | `set_volume` | T1 | Set the volume (level 0-100), change it (e.g. +10 / -10), or mute/unmute. | `level`?, `change`?, `mute`? |
 
 ## Reading and operating app windows
@@ -162,5 +162,11 @@ Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
 | `create_routine` | T1 | Save a named routine the user describes: a list of requests run in order when they say its name (e.g. 'study mode': open my project in VS Code; play my phonk playlist). | `name`, `steps` |
 | `forget_routine` | T1 | Delete a named routine, or a learned one by its #number. | `name` |
 | `list_routines` | T0 | The user's named routines and the ones TARS learned from finished tasks. | none |
+
+## site_actions
+
+| Tool | Tier | What it does | Parameters |
+|---|---|---|---|
+| `open_site` | T1 | Open one of the user's sites, optionally at a shortcut: youtube search/play/subscriptions, github notifications/repo/search/pulls/issues, leetcode problem/search, cheatsheet topic (QuickRef, e.g. 'git'), linkedin notifications/messages/search/jobs. | `site`, `action`?, `query`? |
 
 `?` = optional parameter.

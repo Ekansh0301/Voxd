@@ -75,8 +75,30 @@ def _open(text: str, sites: SiteRegistry) -> Route | None:
     return None
 
 
+def _youtube(text: str) -> Route | None:
+    """'play lofi beats on youtube', 'search youtube for linux tutorials'."""
+    if m := re.fullmatch(rf"{POLITE}(?:play|put on) (.+?) on youtube{TAIL}", text):
+        q = m.group(1).strip()
+        return Route(
+            "open_site",
+            {"site": "youtube", "action": "play", "query": q},
+            f"Playing {q} on YouTube.",
+        )
+    if m := re.fullmatch(
+        rf"{POLITE}(?:search youtube for|search for (.+?) on youtube|look up (.+?) on youtube)(?: (.+?))?{TAIL}",
+        text,
+    ):
+        q = next(g for g in m.groups() if g)
+        return Route(
+            "open_site",
+            {"site": "youtube", "action": "search", "query": q.strip()},
+            "Searching YouTube.",
+        )
+    return None
+
+
 def match(text: str, sites: SiteRegistry) -> Route | None:
     t = re.sub(r"\s+", " ", text.lower().strip())
     if re.fullmatch(rf"{POLITE}(?:what(?:'s| is) the time|what time is it)(?: now)?{TAIL}", t):
         return Route("get_datetime", {}, "")
-    return _volume(t) or _media(t) or _open(t, sites)
+    return _volume(t) or _media(t) or _youtube(t) or _open(t, sites)

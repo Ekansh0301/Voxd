@@ -24,6 +24,7 @@ def default_registry(memory: Memory | None = None, skills: Skills | None = None)
         music,
         research,
         routines,
+        site_actions,
     )
 
     apps.register(reg, apps.AppRegistry())
@@ -36,4 +37,5 @@ def default_registry(memory: Memory | None = None, skills: Skills | None = None)
     routines.register(reg, skills or Skills())
     ask_ai.register(reg)
     documents.register(reg)
+    site_actions.register(reg)
     return reg

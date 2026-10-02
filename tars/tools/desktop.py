@@ -181,7 +181,8 @@ def notify(ctx: Context, message: str) -> str:
 
 
 def register(reg: Registry):
-    reg.tool("open_url", "Open a website in Firefox: a URL or a known site name (outlook, youtube, github...).",
+    reg.tool("open_url", "Open a website in Firefox: a URL or a known site name (outlook, youtube, github...). "
+             "To search or play something on the user's sites, use open_site instead.",
              obj(["url"], url={"type": "string"}), tier=Tier.T1, speak="Opening")(open_url)  # fmt: skip
     reg.tool("open_app", "Launch an installed desktop application by name.",
              obj(["name"], name={"type": "string"}), tier=Tier.T1, speak="Opening")(open_app)  # fmt: skip
