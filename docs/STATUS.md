@@ -96,9 +96,7 @@ Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-1
 
 ## Waiting on you
 
-- Voice recordings for the speech-recognition comparison (`bench.record_commands`).
-- Choosing a cloud model provider for hard tasks (Phase 5).
-- Trying "connect to ada" in Termius and the Right Ctrl tap-to-stop.
+The decisions and one-time steps waiting on you are kept in [TODO.md](TODO.md).
 
 ## Known limits
 

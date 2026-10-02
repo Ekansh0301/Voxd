@@ -65,6 +65,7 @@ A few one-time permissions (screenshots, keyboard and mouse, VS Code) are in
 | [TOOLS.md](docs/TOOLS.md) | All 67 tools the model can use (generated) |
 | [TESTING.md](docs/TESTING.md) | Unit tests, the three evals, benchmarks |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Problems met and their fixes |
+| [TODO.md](docs/TODO.md) | **Decisions and to-dos waiting on you**, and the work queued next |
 | [STATUS.md](docs/STATUS.md) | Progress against the plan |
 | [PLAN.md](docs/PLAN.md) | The full design and roadmap |
 | [BENCHMARKS.md](docs/BENCHMARKS.md) | Model, speech and voice measurements |

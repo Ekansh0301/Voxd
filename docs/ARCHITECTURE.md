@@ -38,7 +38,7 @@ flowchart LR
 | `deploy/` | The GNOME Shell extension, the VS Code extension, the pttd systemd units, templates |
 
 The second model in `config/tars.yaml` (`scout`, Qwen3.5-0.8B on the CPU) is set up
-and benchmarked but not used yet; it's reserved for Phase 4's helper agents.
+and benchmarked but not used yet; it's kept for background checks (Phase 6).
 
 ## One turn
 

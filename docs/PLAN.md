@@ -2,7 +2,7 @@
 
 > Status: design plan, written 2026-09-30. It replaces the v1 prototype architecture: v1 was single-shot voice commands, and v2 is a multi-agent system that operates the laptop.
 >
-> **Progress:** Phases 0–3 are done (2026-10-02). This document is the design and roadmap; what's built is described in [ARCHITECTURE.md](ARCHITECTURE.md), and progress against each phase in [STATUS.md](STATUS.md).
+> **Progress:** Phases 0–4 are done and most of Phase 5 (2026-10-02). This document is the design and roadmap; what's built is described in [ARCHITECTURE.md](ARCHITECTURE.md), and progress against each phase in [STATUS.md](STATUS.md).
 > Decisions made (2026-09-30):
 > - **Name:** TARS, after Interstellar's robot, on your laptop "tardis".
 > - **Browser:** Firefox, with Outlook web for mail.
@@ -792,6 +792,9 @@ This assumes part-time work at about 15–20 h/week. Every phase has **exit crit
 - **Exit:** desktop and browser evals ≥ 65%; "explain the error on my screen" works in the terminal, VS Code and Firefox.
 
 ### Phase 4 — Multi-agent, recursion, skills (3 weeks)
+
+> **Partly done** (learned and taught routines, task view, long tasks): [STATUS.md](STATUS.md). Helper agents are proposed to skip ([TODO.md](TODO.md)).
+
 - The Conductor, Planner, specialists and Verifier; `delegate`; question bubbling; budgets; loop detection.
 - Per-role prefix caching with slots.
 - Skill capture, replay and fallback; teach-by-demonstration v1.
@@ -799,6 +802,9 @@ This assumes part-time work at about 15–20 h/week. Every phase has **exit crit
 - **Exit:** long tasks (8–15 steps) ≥ 55%; tasks that have a skill ≥ 90% and at least 3× faster than a first run.
 
 ### Phase 5 — Capabilities (4 weeks)
+
+> **Mostly done** (web AIs with redaction, research, documents, site shortcuts, forms, patches); Outlook and a cloud API are pending: [STATUS.md](STATUS.md), [TODO.md](TODO.md).
+
 - Researcher: SearXNG, deep research, citations, local document index.
 - Comms: **Outlook web** (college Microsoft 365) triage, summarize, draft in the compose box, approve, send, with skills for each.
 - Site profiles: your list of websites and what you use each for becomes curated site skills.
