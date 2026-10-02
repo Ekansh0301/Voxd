@@ -131,6 +131,30 @@ async def undo_edit(ctx: Context) -> str:
     return f"restored {names} to before the last change"
 
 
+async def search_code(ctx: Context, text: str, folder: str = ".") -> str:
+    """Every line containing `text` under a folder (like grep -rn), hidden folders and
+    virtualenvs skipped."""
+    base = resolve(folder, ctx.home)
+    check_read(base, ctx.home)
+    if not base.is_dir():
+        return f"error: {folder} is not a folder"
+    excludes = [
+        f"--exclude-dir={d}"
+        for d in (".*", "node_modules", "venv", ".venv", "__pycache__", "build", "dist")
+    ]
+    # the full path, not ".": a pattern like ".*" would exclude the starting folder itself
+    out = subprocess.run(["grep", "-rnIF", *excludes, "--", text, str(base)], capture_output=True,
+                         text=True, timeout=30).stdout.splitlines()  # fmt: skip
+    out = [ln.removeprefix(str(base) + "/") for ln in out]
+
+    if not out:
+        return f"no line contains {text!r} under {folder}"
+    files = sorted({ln.split(":", 1)[0] for ln in out})
+    shown = "\n".join(ln[:200] for ln in out[:60])
+    more = f"\n… {len(out) - 60} more lines" if len(out) > 60 else ""
+    return f"{len(out)} line(s) in {len(files)} file(s):\n{shown}{more}"
+
+
 def _patch_files(patch: str) -> list[str]:
     """Paths a unified diff writes ('+++ b/src/app.py' -> 'src/app.py')."""
     out = []
@@ -202,6 +226,9 @@ def register(reg: Registry):
         obj(["path", "find", "replace"], path=path, find={"type": "string"}, replace={"type": "string"}),
         tier=Tier.T1,
     )(edit_file)  # fmt: skip
+    reg.tool("search_code", "Find every line containing some text in a folder's files (like grep -rn): "
+             "use before renaming or changing something used in several files.",
+             obj(["text"], text={"type": "string"}, folder=path), speak="Searching the code")(search_code)  # fmt: skip
     reg.tool("undo_edit", "Revert the last edit_file or apply_patch change.", tier=Tier.T1)(
         undo_edit
     )

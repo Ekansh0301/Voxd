@@ -99,11 +99,15 @@ class Atspi:
     async def _call(self, ref, iface, method, sig=None, body=(), timeout=2.0):
         msg = new_method_call(DBusAddress(ref[1], ref[0], iface), method, sig, body)
         reply = await asyncio.wait_for(self._bus.send_and_get_reply(msg), timeout)
+        if reply.header.message_type.name == "error":  # e.g. a defunct object: not data
+            raise RuntimeError(f"{method}: {reply.body[0] if reply.body else 'D-Bus error'}")
         return reply.body
 
     async def _prop(self, ref, iface, name):
         msg = Properties(DBusAddress(ref[1], ref[0], iface)).get(name)
         reply = await asyncio.wait_for(self._bus.send_and_get_reply(msg), 2.0)
+        if reply.header.message_type.name == "error":
+            raise RuntimeError(f"{name}: {reply.body[0] if reply.body else 'D-Bus error'}")
         return reply.body[0][1]
 
     async def _node(self, ref, depth: int) -> Node | None:

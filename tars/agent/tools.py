@@ -107,14 +107,16 @@ class Registry:
         if "_raw" in args:
             return f"error: arguments were not valid JSON: {args['_raw'][:200]}"
         try:
+            try:  # "bad arguments" only when they really don't fit the tool
+                inspect.signature(tool.handler).bind(ctx, **args)
+            except TypeError as e:
+                return f"error: bad arguments for {name}: {e}"
             await ctx.require(tool.tier, f"{name} {args}")
             out = await tool.run(ctx, args)
             ctx.actions.append(f"{name} {args}")
             return out
         except Denied as e:
             return f"refused: {e}"
-        except TypeError as e:  # wrong/missing arguments from the model
-            return f"error: bad arguments for {name}: {e}"
         except (ValueError, ConnectionError) as e:  # expected: "nothing named X", app not open
             return f"error: {e}"
         except Exception as e:

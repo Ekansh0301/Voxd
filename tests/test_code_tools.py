@@ -100,3 +100,9 @@ def test_apply_patch_checks_first(proj):
     with pytest.raises(Denied):  # applies, but nobody approved it
         run(code.apply_patch(ctx, PATCH))
     assert "a - b" in (proj / "proj/app.py").read_text()
+
+
+def test_search_code_finds_all_uses(proj):
+    (proj / "proj/main.py").write_text("from app import add\nprint(add(1, 2))\n")
+    out = run(code.search_code(Context(home=proj, desktop=False), "add", "proj"))
+    assert "app.py:1:" in out and "main.py:2:" in out and "in 2 file(s)" in out
