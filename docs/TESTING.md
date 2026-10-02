@@ -1,6 +1,6 @@
 # Testing TARS
 
-Four levels, from fast and fake to slow and real.
+Five suites, from fast and fake to slow and real.
 
 | Command | What it checks | Needs | Time |
 |---|---|---|---|
@@ -10,7 +10,7 @@ Four levels, from fast and fake to slow and real.
 | `.venv/bin/python -m evals.skill_eval` | learned routines: each task once (learned), then variants that replay it; correctness and speed-up | GPU, your desktop | ~3 min |
 | `.venv/bin/python -m evals.live_eval` | 12 real-app tasks checked on the real result (Calculator, Okular, VS Code, Super Productivity, volume, ChatGPT, research, Spotube…) | GPU, your desktop, the apps | ~5 min |
 
-The two desktop evals open windows on your screen, send one question to ChatGPT,
+The three desktop evals open windows on your screen, ask ChatGPT a few questions,
 and play a song briefly. They put things back afterwards (volume, paused music,
 Super Productivity's view) and close only windows they opened. Add `-k name` to run
 some tasks only. Results are written to `evals/results/` (git-ignored).

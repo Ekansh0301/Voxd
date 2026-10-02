@@ -6,7 +6,7 @@ Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-1
 |---|---|---|
 | 0. Foundation and measurement | ✅ done | models chosen by benchmark ([BENCHMARKS.md](BENCHMARKS.md)) |
 | 1. Voice and avatar | ✅ done (one item open) | key release → first speech ~1.6 s; STT model choice waits for your recordings |
-| 2. Agent core and MCP | ✅ done | 56 tools, policy, approvals, memory |
+| 2. Agent core and MCP | ✅ done | tools, policy, approvals, memory |
 | 3. Screen reading and control | ✅ done | live eval 11/12 (target ≥ 65%) |
 | 4. Multi-agent, recursion, skills | ✅ routines done; helper agents proposed to skip | long tasks 6/6, routine replays 4/4 |
 | 5. Capabilities (mail, forms, cloud) | next: Outlook drafting | research is done early |
