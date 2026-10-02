@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import secrets
+from collections.abc import Callable
 
 import websockets
 
@@ -22,6 +23,7 @@ class UiBus:
         self._clients: set = set()
         self._last_state: str | None = None
         self._server = None
+        self.on_message: Callable[[dict], None] = lambda _m: None  # window -> TARS
 
     @property
     def url(self) -> str:
@@ -39,7 +41,15 @@ class UiBus:
         try:
             if self._last_state:
                 await ws.send(self._last_state)
-            await ws.wait_closed()
+            async for raw in ws:  # typed text, quit, ... from the avatar window
+                try:
+                    msg = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(msg, dict):
+                    self.on_message(msg)
+        except websockets.ConnectionClosed:
+            pass
         finally:
             self._clients.discard(ws)
 

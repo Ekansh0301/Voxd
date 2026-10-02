@@ -9,7 +9,9 @@ Starts llama-swap (Brain + Scout) automatically if it isn't already running.
 
 import argparse
 import asyncio
+import contextlib
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -50,7 +52,11 @@ async def main():
     await bus.start()
     avatar = None
     if cfg["voice"].get("avatar", True) and not args.no_avatar:
-        avatar = subprocess.Popen([sys.executable, "-m", "tars.ui", "--ws", bus.url])
+        # The bus URL carries its token: pass it in the environment (readable only by you),
+        # not on the command line (which every user can read in /proc).
+        avatar = subprocess.Popen(
+            [sys.executable, "-m", "tars.ui"], env={**os.environ, "TARS_WS": bus.url}
+        )
     try:
         await warm_up(cfg["llm"]["endpoint"], cfg["llm"]["brain"])
         service = VoiceService(
@@ -72,8 +78,20 @@ async def main():
         mouth = asyncio.create_task(service.mouth_loop(bus.publish))
         source = args.ptt or cfg["voice"]["ptt"]["source"]
         events = stdin_events() if source == "stdin" else pttd_events(cfg["voice"]["ptt"]["socket"])
+        runner = asyncio.create_task(service.run(events))
+        service.on_event = bus.publish  # subtitles to the avatar window
+
+        def from_window(msg: dict):
+            if msg.get("type") == "text":
+                service.submit_text(str(msg.get("text", "")))
+            elif msg.get("type") == "quit":  # tray menu "Quit TARS"
+                logging.getLogger("tars.voice").info("quit from the TARS menu")
+                runner.cancel()
+
+        bus.on_message = from_window
         try:
-            await service.run(events)
+            with contextlib.suppress(asyncio.CancelledError):
+                await runner
         finally:
             mouth.cancel()
             primer.cancel()

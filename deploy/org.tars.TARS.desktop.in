@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=TARS
+GenericName=Voice assistant
+Comment=Local voice assistant: hold Right Ctrl to talk, or type in its window
+Exec=@BIN@/tars
+Icon=@REPO@/tars/ui/icon.svg
+Terminal=false
+Categories=Utility;
+Keywords=assistant;voice;tars;
+StartupWMClass=TARS
+StartupNotify=false

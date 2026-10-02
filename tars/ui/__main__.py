@@ -1,11 +1,13 @@
 """
 The avatar window: a transparent, always-on-top Live2D overlay.
 
-    .venv/bin/python -m tars.ui --ws ws://127.0.0.1:8765/?token=...
+    TARS_WS=ws://127.0.0.1:8765/?token=... .venv/bin/python -m tars.ui
 
 Normally started by `python -m tars.voice`. Runs under XWayland, because
 GNOME's Wayland compositor doesn't let native apps stay on top or choose
 their position. Drag it with the left mouse button; right-click for options.
+Under the avatar: subtitles (what you said, what TARS is saying) and a box to
+type to TARS instead of talking. A TARS icon in the top bar has the same menu.
 
 The page is served through a private tars:// scheme instead of file:// (whose
 URLs Chromium's fetch() refuses), so no network port is opened for it:
@@ -23,8 +25,10 @@ from urllib.parse import quote
 
 os.environ.setdefault("QT_QPA_PLATFORM", "xcb")  # XWayland: always-on-top + positioning
 
-from PyQt6.QtCore import QBuffer, QByteArray, QEvent, QObject, QPoint, Qt, QUrl
-from PyQt6.QtGui import QAction, QColor
+import json
+
+from PyQt6.QtCore import QBuffer, QByteArray, QEvent, QObject, QPoint, Qt, QTimer, QUrl
+from PyQt6.QtGui import QAction, QColor, QIcon
 from PyQt6.QtWebEngineCore import (
     QWebEnginePage,
     QWebEngineProfile,
@@ -34,7 +38,16 @@ from PyQt6.QtWebEngineCore import (
     QWebEngineUrlSchemeHandler,
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWidgets import QApplication, QMenu
+from PyQt6.QtWebSockets import QWebSocket
+from PyQt6.QtWidgets import (
+    QApplication,
+    QLabel,
+    QLineEdit,
+    QMenu,
+    QSystemTrayIcon,
+    QVBoxLayout,
+    QWidget,
+)
 
 from tars import TARS_HOME
 
@@ -114,19 +127,26 @@ def main():
     # Ctrl+C in the terminal reaches this child too; exit quietly (TARS shuts it down anyway).
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ws", required=True, help="avatar bus URL (with token)")
+    ap.add_argument(
+        "--ws",
+        default=os.environ.get("TARS_WS"),
+        help="avatar bus URL (with token); default $TARS_WS",
+    )
     ap.add_argument("--size", default="320x420", help="window WIDTHxHEIGHT")
     ap.add_argument("--zoom", type=float, default=2.2, help="1 = full body; larger = closer")
     ap.add_argument("--y", type=float, default=-1.1, help="vertical offset of the model")
     ap.add_argument("--snapshot", help="testing: save PNGs of the window to this prefix")
     ap.add_argument("--snapshot-at", default="6,9,12,15", help="seconds after start")
     args = ap.parse_args()
+    if not args.ws:
+        sys.exit("no avatar bus: start TARS with `tars` (or pass --ws)")
     if not (ROOTS["app"] / "index.html").exists():
         sys.exit("avatar app not built: run `.venv/bin/python -m tars.ui.live2d.build`")
 
     register_scheme()
     app = QApplication(sys.argv)
     app.setApplicationName("TARS")
+    app.setDesktopFileName("org.tars.TARS")  # GNOME shows TARS's icon for its windows
     handler = FileScheme()
     QWebEngineProfile.defaultProfile().installUrlSchemeHandler(SCHEME, handler)
 
@@ -145,35 +165,150 @@ def main():
     s.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
 
     w, h = (int(x) for x in args.size.split("x"))
-    view.resize(w, h)
-    geo = app.primaryScreen().availableGeometry()
-    view.move(QPoint(geo.right() - w - 24, geo.bottom() - h - 24))
+    view.setFixedSize(w, h)
     view.load(
         QUrl(f"tars://app/index.html?ws={quote(args.ws, safe='')}&zoom={args.zoom}&y={args.y}")
     )
 
-    view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+    # The window: avatar, then subtitles, then the text box.
+    win = QWidget()
+    win.setWindowTitle("TARS")
+    win.setWindowFlags(view.windowFlags())
+    view.setWindowFlags(Qt.WindowType.Widget)
+    win.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+    layout = QVBoxLayout(win)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(6)
+    layout.addWidget(view)
+    caption = QLabel()
+    caption.setWordWrap(True)
+    caption.setTextFormat(Qt.TextFormat.RichText)
+    caption.setFixedWidth(w)
+    caption.setStyleSheet(
+        "QLabel { background: rgba(14, 18, 32, 215); color: #f2f4f8; border-radius: 10px;"
+        " padding: 7px 10px; font-size: 13px; }"
+    )
+    caption.hide()
+    layout.addWidget(caption)
+    entry = QLineEdit()
+    entry.setPlaceholderText("Type to TARS…  (Enter to send)")
+    entry.setFixedWidth(w)
+    entry.setStyleSheet(
+        "QLineEdit { background: rgba(14, 18, 32, 215); color: #f2f4f8; border: 1px solid #3a4560;"
+        " border-radius: 10px; padding: 6px 10px; font-size: 13px; }"
+    )
+    layout.addWidget(entry)
+
+    def fit():
+        """Resize to the caption, growing upward: the bottom edge stays put."""
+        bottom = win.geometry().bottom()
+        win.adjustSize()
+        win.move(win.x(), bottom - win.height() + 1)
+
+    def place():
+        win.adjustSize()
+        geo = app.primaryScreen().availableGeometry()
+        win.move(QPoint(geo.right() - win.width() - 24, geo.bottom() - win.height() - 24))
+
+    # Talking to TARS over the same token-protected bus the page uses.
+    sock = QWebSocket()
+    lines = {"you": "", "tars": ""}
+    hide_timer = QTimer(singleShot=True, interval=8000)
+    hide_timer.timeout.connect(lambda: (caption.hide(), fit()))
+
+    def show_caption():
+        def esc(t: str) -> str:
+            return t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+        parts = []
+        if lines["you"]:
+            parts.append(f"<span style='color:#9aa6bf'>You: {esc(lines['you'])}</span>")
+        if lines["tars"]:
+            parts.append(f"<b>TARS:</b> {esc(lines['tars'][-400:])}")
+        caption.setText("<br>".join(parts))
+        caption.setVisible(bool(parts))
+        hide_timer.stop()
+        fit()
+
+    def on_message(raw: str):
+        try:
+            msg = json.loads(raw)
+        except json.JSONDecodeError:
+            return
+        if msg.get("type") == "subtitle":
+            who = msg.get("who")
+            if who == "you":
+                lines["you"], lines["tars"] = msg.get("text", ""), ""
+            elif who == "tars":
+                lines["tars"] = msg.get("text", "")
+            show_caption()
+        elif msg.get("type") == "state":
+            state = msg.get("state", "")
+            tray.setToolTip(f"TARS — {state}")
+            if state == "idle" and caption.isVisible():
+                hide_timer.start()  # fade out a while after it finishes talking
+
+    sock.textMessageReceived.connect(on_message)
+    sock.open(QUrl(args.ws))
+
+    def send(msg: dict):
+        sock.sendTextMessage(json.dumps(msg))
+
+    def submit():
+        text = entry.text().strip()
+        if text:
+            send({"type": "text", "text": text})
+            entry.clear()
+
+    entry.returnPressed.connect(submit)
+
+    def type_message():
+        win.show()
+        win.raise_()
+        win.activateWindow()
+        entry.setFocus()
+
+    def toggle_avatar():
+        win.setVisible(not win.isVisible())
+
+    def quit_tars():
+        send({"type": "quit"})  # TARS stops; it also closes this window
+        QTimer.singleShot(1500, app.quit)
+
+    icon = QIcon(str(Path(__file__).with_name("icon.svg")))
+    app.setWindowIcon(icon)
     menu = QMenu()
     menu.addActions(
         [
-            QAction("Hide avatar", menu, triggered=view.hide),
-            QAction("Quit avatar", menu, triggered=app.quit),
+            QAction("Type a message", menu, triggered=type_message),
+            QAction("Show / hide avatar", menu, triggered=toggle_avatar),
         ]
     )
+    menu.addSeparator()
+    menu.addAction(QAction("Quit TARS", menu, triggered=quit_tars))
+    tray = QSystemTrayIcon(icon)
+    tray.setToolTip("TARS")
+    tray.setContextMenu(menu)
+    tray.activated.connect(
+        lambda reason: (
+            toggle_avatar() if reason == QSystemTrayIcon.ActivationReason.Trigger else None
+        )
+    )
+    tray.show()  # top bar (Ubuntu's AppIndicator extension)
+    view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
     view.customContextMenuRequested.connect(lambda pos: menu.exec(view.mapToGlobal(pos)))
 
     if args.snapshot:
-        from PyQt6.QtCore import QTimer
-
         times = [float(t) for t in args.snapshot_at.split(",")]
         for i, t in enumerate(times):
             QTimer.singleShot(
-                int(t * 1000), lambda i=i: view.grab().save(f"{args.snapshot}-{i}.png")
+                int(t * 1000), lambda i=i: win.grab().save(f"{args.snapshot}-{i}.png")
             )
         QTimer.singleShot(int(times[-1] * 1000) + 500, app.quit)
 
-    view.show()
-    drag = DragFilter(view)
+    place()
+    win.show()
+    drag = DragFilter(win)
     # The page renders into a child widget that only exists after loading starts.
     view.loadFinished.connect(
         lambda _ok: view.focusProxy() and view.focusProxy().installEventFilter(drag)

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# `tars`: start TARS. Extra arguments go to `python -m tars.voice`
+# (e.g. `tars --no-avatar`, `tars --ptt stdin`, `tars --save-audio`).
+# From a terminal it logs there; from the app icon, to ~/.local/share/tars/logs/tars.log.
+REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+if ss -ltnH 2>/dev/null | grep -q '127.0.0.1:8765 '; then  # its avatar bus is up
+    notify-send -a TARS -i "$REPO/tars/ui/icon.svg" "TARS" "TARS is already running" 2>/dev/null
+    echo "TARS is already running (use its top-bar icon to quit)" >&2
+    exit 0
+fi
+cd "$REPO" || exit 1
+if [ -t 1 ]; then
+    exec .venv/bin/python -m tars.voice "$@"
+fi
+mkdir -p "$HOME/.local/share/tars/logs"
+exec .venv/bin/python -m tars.voice "$@" >> "$HOME/.local/share/tars/logs/tars.log" 2>&1

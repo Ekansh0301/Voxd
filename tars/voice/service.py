@@ -81,6 +81,7 @@ class VoiceService:
         )
         self.history: list[dict] = []
         self._warned_clipping = False
+        self.on_event: Callable[[dict], None] = lambda _e: None  # subtitles etc. to the window
         self.save_audio = save_audio  # opt-in: keep your utterances for STT evaluation
         if save_audio:
             save_audio.mkdir(parents=True, exist_ok=True)
@@ -133,8 +134,14 @@ class VoiceService:
         self.player.interrupt()
 
     # ── speaking outside a streamed answer ──────────────────────────────────
+    def subtitle(self, who: str, text: str):
+        """Captions for the avatar window: what was heard/typed, and TARS's words as
+        each spoken chunk starts, so the text follows the voice."""
+        self.on_event({"type": "subtitle", "who": who, "text": text})
+
     async def _say(self, text: str, state: str = SPEAKING):
         samples = await asyncio.to_thread(self.tts.synth, text)
+        self.subtitle("tars", text)
         self._set(state)
         self.player.enqueue(samples)
         await asyncio.to_thread(self.player.wait_idle)
@@ -188,9 +195,29 @@ class VoiceService:
         with (self.save_audio / "manifest.jsonl").open("a") as f:
             f.write(json.dumps({"file": f"{name}.wav", "heard": text, "text": text}) + "\n")
 
+    def submit_text(self, text: str):
+        """Typed in the avatar window: an approval answer, or a new turn (no STT)."""
+        text = text.strip()
+        if not text:
+            return
+        if self._approval is not None and not self._approval.done():
+            print(f"you : {text}  (typed)", flush=True)
+            self._approval.set_result(text)
+            return
+
+        async def turn():
+            await self._interrupt()
+            now = time.monotonic()
+            await self._guarded(self._respond(text, now, now, typed=True))
+
+        self._turn = asyncio.get_running_loop().create_task(turn())
+
     async def _guarded_turn(self, audio, t_release: float):
+        await self._guarded(self._handle_turn(audio, t_release))
+
+    async def _guarded(self, coro):
         try:
-            await self._handle_turn(audio, t_release)
+            await coro
         except asyncio.CancelledError:
             raise
         except Exception as e:  # e.g. LLM server down: say so on the avatar, keep running
@@ -262,8 +289,12 @@ class VoiceService:
         if not text:
             self._set(IDLE, note="heard nothing")
             return
+        await self._respond(text, t_release, t_stt)
+
+    async def _respond(self, text: str, t_release: float, t_stt: float, typed: bool = False):
         self._set(THINKING, heard=text)
-        print(f"\nyou : {text}", flush=True)
+        self.subtitle("you", text)
+        print(f"\nyou : {text}{'  (typed)' if typed else ''}", flush=True)
 
         if cmd := commands.parse(text):  # personality settings: no LLM round-trip
             confirmation = commands.apply(self.cfg, *cmd)
@@ -289,6 +320,7 @@ class VoiceService:
 
         chunks: asyncio.Queue[str | None] = asyncio.Queue()
         marks: dict[str, float] = {}
+        said: list[str] = []
         chunker = SpeechChunker()
 
         async def speak():
@@ -296,6 +328,8 @@ class VoiceService:
                 samples = await asyncio.to_thread(self.tts.synth, chunk)
                 if "audio" not in marks:
                     marks["audio"] = time.monotonic()
+                said.append(chunk)
+                self.subtitle("tars", " ".join(said))
                 self._set(SPEAKING)
                 self.player.enqueue(samples)
 

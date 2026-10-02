@@ -80,6 +80,17 @@ bash scripts/gen_llama_swap.sh # writes ~/.config/tars/llama-swap.yaml
 ~/.local/share/tars/opt/bin/llama-swap --config ~/.config/tars/llama-swap.yaml --listen 127.0.0.1:8090
 ```
 
+Then install the `tars` command and the TARS app entry (icon in the app grid):
+
+```bash
+bash scripts/install_launcher.sh
+tars                           # or click TARS in the app grid
+```
+
+While it runs, a TARS icon sits in the top bar (Type a message, Show/hide
+avatar, Quit TARS). Hold Right Ctrl to talk, or type in the box under the
+avatar; subtitles under the avatar show what it heard and what it is saying.
+
 This needs Ubuntu with an NVIDIA driver and the CUDA toolkit (`nvcc`), Python
 3.11, cmake, and about 15 GB of disk. Models and binaries go to
 `~/.local/share/tars/`, never into the repo. The setup script is idempotent
