@@ -28,6 +28,7 @@ from tars.tools import browser, default_registry
 
 T = Path.home() / "tars-screen-test"
 CHECKS = {
+    "vscode-terminal": ("settings.json", "filenotfound"),
     "terminal": ("settings.json", "filenotfound"),
     "vscode": ("colon", "line 3"),
     "firefox": ("prod.json", "config"),
@@ -38,7 +39,7 @@ FILES = {
     "page.html": "<!doctype html><title>Build failed</title><h1>Deploy failed</h1><pre>Error: ENOENT: no such file or directory, open '/app/config/prod.json'\n    at loadConfig (/app/src/config.js:12:18)</pre>",
 }
 
-SCENES = sys.argv[1:] or ["terminal", "vscode", "firefox"]
+SCENES = sys.argv[1:] or ["terminal", "vscode", "vscode-terminal", "firefox"]
 
 
 async def front(name, tries=30):
@@ -95,6 +96,20 @@ async def main():
                 subprocess.run(["code", "-g", f"{T}/broken.py:3"])
                 await asyncio.sleep(3)
                 w = await front("tars-screen-test")
+            elif scene == "vscode-terminal":  # the error is in VS Code's integrated terminal
+                from tars.perception.keyboard import Keyboard
+
+                subprocess.run(["code", "-n", str(T)])
+                await asyncio.sleep(4)
+                subprocess.run(["code", "-g", f"{T}/fetch.py"])
+                await asyncio.sleep(3)
+                w = await front(T.name)
+                async with Keyboard() as kb:
+                    await kb.combo("ctrl+`")
+                    await asyncio.sleep(2.5)
+                    await kb.type("python3 fetch.py")
+                    await kb.combo("Enter")
+                await asyncio.sleep(3)
             else:
                 await reg.call(ctx, "open_url", {"url": f"file://{T}/page.html"})
                 await asyncio.sleep(2)

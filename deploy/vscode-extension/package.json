@@ -1,0 +1,13 @@
+{
+  "name": "tars-bridge",
+  "displayName": "TARS bridge",
+  "description": "Lets the local TARS assistant read this window's active file, problems and terminal output (read-only, over a private Unix socket).",
+  "version": "0.1.0",
+  "publisher": "tars",
+  "license": "MIT",
+  "engines": { "vscode": "^1.93.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "repository": { "type": "git", "url": "https://github.com/Ekansh0301/Voxd" }
+}

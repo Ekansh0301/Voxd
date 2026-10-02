@@ -14,6 +14,7 @@ just below it (the one the user was in) is used.
 
 import io
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -133,7 +134,8 @@ def _excerpts(path: Path, checks: str, around: int = 2, limit: int = 3) -> list[
         src = path.read_text(errors="replace").splitlines()
     except OSError:
         return []
-    nums = sorted({int(n) for n in re.findall(rf"{re.escape(path.name)}:(\d+)", checks)})[:limit]
+    name = re.escape(path.name)  # "a.py:3:" (checks, Problems) or 'a.py", line 3' (tracebacks)
+    nums = sorted({int(n) for n in re.findall(rf'{name}(?::|", line )(\d+)', checks)})[:limit]
     out = []
     for n in nums:
         lo, hi = max(1, n - around), min(len(src), n + around)
@@ -160,6 +162,66 @@ async def look(win: Window, question: str) -> str:
     return await ask_image(buf.getvalue(), question)
 
 
+ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")
+
+
+async def _vscode(ctx: Context, win: Window, head: str, q: str) -> str:
+    """Via the TARS bridge extension when it runs in that window (exact file, cursor,
+    Problems, integrated-terminal output); else the title and VS Code's saved state."""
+    from tars.agent.policy import check_read
+    from tars.perception import vscode as bridge
+    from tars.tools.code import check_code
+
+    lines = [head]
+    path: Path | None = None
+    found_problem = False
+    try:
+        w = await bridge.window(win.title)
+    except OSError:
+        w = None
+    if w:
+        sock, st = w
+        if st.get("file"):
+            path = Path(st["file"])
+            lines.append(f"open file: {path} (cursor at line {st.get('line')})")
+        if st.get("selection"):
+            lines.append(f"selected text:\n{st['selection'][:1500]}")
+        probs = await bridge.problems(sock)
+        if probs:
+            found_problem = True
+            lines.append("Problems panel:\n" + "\n".join(
+                f"  {p['severity']}: {Path(p['file']).name}:{p['line']}: {p['message']}"
+                + (f" ({p['source']})" if p.get("source") else "") for p in probs[:12]))  # fmt: skip
+        runs = await bridge.terminal_runs(sock)
+        if runs:
+            failed = [r for r in runs if r.get("exitCode") not in (0, None)]
+            run = (failed or runs)[-1]
+            out = ANSI.sub("", run.get("output", "")).strip()[-2500:]
+            found_problem = found_problem or bool(failed)
+            lines.append(
+                f"integrated terminal, last command: {run.get('command')} (exit code {run.get('exitCode')})\n{out}"
+            )
+    else:
+        path, folder = vscode_file(win.title, ctx.home)
+        lines.append(
+            f"open file: {path}"
+            if path
+            else f"open file: couldn't locate it (workspace {folder or 'unknown'})"
+        )
+    if path is not None and path.is_file():
+        check_read(path, ctx.home)
+        checks = await check_code(ctx, str(path)) if path.suffix == ".py" else ""
+        if checks and not (
+            "syntax: ok" in checks and "no issues" in checks and "line(s)" not in checks
+        ):
+            found_problem = True
+            lines.append(checks)
+        lines += _excerpts(path, "\n".join(lines))
+    if not found_problem:
+        lines.append("on screen: " + await look(win, q))
+    return "\n".join(lines)
+
+
 async def screen_context(ctx: Context, question: str = "") -> str:
     if not ctx.desktop:  # evals: never read the real screen into their results
         return ("the user is in: com.mitchellh.ghostty: tmux (terminal) (dry run)\nterminal output:\n"
@@ -182,23 +244,7 @@ async def screen_context(ctx: Context, question: str = "") -> str:
         return f"{head}\n(not inside tmux, so read from the screen)\n{await look(win, q)}"
 
     if kind == "vscode":
-        path, folder = vscode_file(win.title, ctx.home)
-        lines = [head]
-        if path is None:
-            lines.append(f"open file: couldn't locate it (workspace {folder or 'unknown'})")
-        else:
-            from tars.agent.policy import check_read
-            from tars.tools.code import check_code
-
-            check_read(path, ctx.home)
-            lines.append(f"open file: {path}")
-            checks = await check_code(ctx, str(path)) if path.suffix == ".py" else ""
-            if checks:
-                lines.append(checks)
-                lines += _excerpts(path, checks)
-            if not checks or "no issues" in checks and "syntax: ok" in checks:
-                lines.append("on screen: " + await look(win, q))
-        return "\n".join(lines)
+        return await _vscode(ctx, win, head, q)
 
     if kind == "firefox":
         from tars.tools import browser
