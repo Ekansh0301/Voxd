@@ -1,7 +1,7 @@
 # TARS tools
 
 Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
-64 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
+65 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
 
 | Tier | Meaning |
 |---|---|
@@ -154,6 +154,12 @@ Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
 |---|---|---|---|
 | `index_documents` | T0 | Index a folder's documents (text, notes, PDFs) so search_documents can find them. | `folder`? |
 | `search_documents` | T0 | Search the user's own documents and PDFs for a topic; returns passages with the file they're from. | `query` |
+
+## forms
+
+| Tool | Tier | What it does | Parameters |
+|---|---|---|---|
+| `fill_form` | T1 | Fill the form on the current Firefox page from the user's saved profile (name, email, phone, roll number, college...). Never submits; returns what was filled for review. | none |
 
 ## routines
 

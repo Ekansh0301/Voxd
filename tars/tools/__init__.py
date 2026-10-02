@@ -6,7 +6,7 @@ from tars.skills.store import Skills
 
 
 def default_registry(memory: Memory | None = None, skills: Skills | None = None) -> Registry:
-    from tars.tools import desktop, files, screen, shell, system, vision
+    from tars.tools import desktop, files, forms, screen, shell, system, vision
     from tars.tools import memory as memory_tools
 
     reg = Registry()
@@ -38,4 +38,5 @@ def default_registry(memory: Memory | None = None, skills: Skills | None = None)
     ask_ai.register(reg)
     documents.register(reg)
     site_actions.register(reg)
+    forms.register(reg)
     return reg
