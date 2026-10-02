@@ -4,6 +4,7 @@ type into elements by the ids from the last read, and read terminal output
 from tmux. Ids are only valid until the next read_screen.
 """
 
+import asyncio
 import shutil
 import subprocess
 
@@ -13,10 +14,55 @@ from tars.perception.atspi import Atspi, Node
 _last: dict[int, Node] = {}
 _labels: dict[str, int] = {}
 _last_window = ""
+_last_text = ""  # what read_screen last showed, to report what an action changed
+
+
+def _remember(a: Atspi, label: str, text: str) -> None:
+    global _last_window, _last_text
+    _last.clear()
+    _last.update(a.refs)
+    _labels.clear()
+    _labels.update(a.labels)
+    _last_window, _last_text = label, text
+
+
+def _diff(before: str, after: str, limit: int = 12) -> str:
+    import difflib
+
+    strip = lambda t: [ln.split("] ", 1)[-1] for ln in t.splitlines()]  # noqa: E731  ids shift
+    changed = [ln for ln in difflib.ndiff(strip(before), strip(after)) if ln[:2] in ("+ ", "- ")]
+    if not changed:
+        return "no visible change in the window"
+    extra = f"\n… {len(changed) - limit} more changes" if len(changed) > limit else ""
+    return "what changed:\n" + "\n".join(changed[:limit]) + extra
+
+
+async def _after_action(wait: float = 0.6) -> str:
+    """Re-read the window after a click/type and say what changed (or which new
+    window, e.g. a dialog, took over). Element names stay valid for the next step."""
+    await asyncio.sleep(wait)
+    async with Atspi() as a:
+        wins = await a.windows()
+        if not wins:
+            return ""
+        app, win = wins[0]  # active window
+        label = f"{app}: {win.name}"
+        same = label == _last_window
+        if not same:  # the old window may still be there, behind a dialog
+            match = [(ap, w) for ap, w in wins if f"{ap}: {w.name}" == _last_window]
+            if match and 1 not in win.states:
+                app, win = match[0]
+                label, same = _last_window, True
+        await a.tree(win)
+        text = a.render(win)
+        before = _last_text
+        _remember(a, label, text)
+    if not same:
+        return f"now active: {label!r}\n" + "\n".join(text.splitlines()[:25])
+    return _diff(before, text)
 
 
 async def read_screen(ctx: Context, window: str = "") -> str:
-    global _last_window
     async with Atspi() as a:
         wins = await a.windows()
         if not wins:
@@ -36,11 +82,7 @@ async def read_screen(ctx: Context, window: str = "") -> str:
         if url and not ctx.sites.check(url, "read").allowed:
             raise Denied(ctx.sites.check(url, "read").reason)
         text = a.render(win)
-        _last.clear()
-        _last.update(a.refs)
-        _labels.clear()
-        _labels.update(a.labels)
-        _last_window = f"{app}: {win.name}"
+        _remember(a, f"{app}: {win.name}", text)
     header = f"window {win.name!r} ({app}){', at ' + url if url else ''}"
     if len(_last) < 3:
         return (
@@ -91,6 +133,10 @@ def _node(element_id: int | None = None, name: str | None = None) -> tuple[int, 
 
 
 async def click(ctx: Context, name: str | None = None, element_id: int | None = None) -> str:
+    return await _click(ctx, name, element_id, observe=True)
+
+
+async def _click(ctx: Context, name: str | None, element_id: int | None, observe: bool) -> str:
     element_id, node = _node(element_id, name)
     if node.risky:  # Send / Submit / Delete / Pay ... always asks
         await ctx.require(Tier.T3, f'click "{node.name}" in {_last_window}')
@@ -98,18 +144,20 @@ async def click(ctx: Context, name: str | None = None, element_id: int | None = 
     if not ctx.desktop:
         return f"clicked {node.role} {node.name!r} (dry run)"
     async with Atspi() as a:
-        return await a.click(node) + " (not verified: read_screen to see the effect)"
+        result = await a.click(node)
+    return f"{result}\n{await _after_action()}" if observe else result
 
 
 async def click_sequence(ctx: Context, names: list[str]) -> str:
     """Press several elements in order, e.g. calculator keys or a menu path."""
     done: list[str] = []
-    for name in names[:30]:
-        result = await click(ctx, name=str(name))
+    names = [str(n) for n in names[:30]]
+    for i, name in enumerate(names):
+        result = await _click(ctx, name, None, observe=i == len(names) - 1)
         if result.startswith("error") or "failed" in result:
             return f"stopped at {name!r}: {result}; clicked so far: {done}"
         done.append(name)
-    return f"clicked in order: {done} (not verified: check the screen to see the effect)"
+    return f"clicked in order: {done}\n{result.split(chr(10), 1)[-1]}"
 
 
 async def type_into(
@@ -122,7 +170,8 @@ async def type_into(
     if not ctx.desktop:
         return f"typed into {node.role} {node.name!r} (dry run)"
     async with Atspi() as a:
-        return await a.set_text(node, text)
+        result = await a.set_text(node, text)
+    return f"{result}\n{await _after_action(0.3)}"
 
 
 def read_terminal(ctx: Context, lines: int = 80) -> str:

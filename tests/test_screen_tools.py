@@ -67,3 +67,13 @@ def test_crop_regions(tmp_path):
     full = Image.open(io.BytesIO(crop_png(p, "full")))
     corner = Image.open(io.BytesIO(crop_png(p, "top-right")))
     assert full.size == (1280, 720) and corner.size == (960, 540)
+
+
+def test_change_report_ignores_shifted_ids():
+    from tars.tools.screen import _diff
+
+    before = "[1] button 'OK'\n[2] static 'Total: 3'"
+    after = "[4] button 'OK'\n[5] static 'Total: 7'"
+    out = _diff(before, after)
+    assert "Total: 3" in out and "Total: 7" in out and "OK" not in out
+    assert _diff(before, before.replace("[1]", "[9]")) == "no visible change in the window"
