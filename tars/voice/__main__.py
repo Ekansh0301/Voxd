@@ -20,7 +20,7 @@ from tars.config import load
 from tars.cuda import reexec_with_cuda_libs
 from tars.llm.swap import ensure_llm, prime, warm_up
 from tars.mcp.manager import MCPManager
-from tars.tools import browser
+from tars.tools import browser, research
 from tars.ui.bus import UiBus
 from tars.voice.ptt import pttd_events, stdin_events
 from tars.voice.service import VoiceService
@@ -98,6 +98,7 @@ async def main():
             mouth.cancel()
             primer.cancel()
             await mcp.close()
+            await research.shutdown()  # the hidden browser, if it was used
     finally:
         if avatar:
             avatar.terminate()
