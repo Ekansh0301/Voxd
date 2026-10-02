@@ -198,7 +198,13 @@ class VoiceService:
         print(f"      [asks: {summary}]", flush=True)
         await asyncio.to_thread(self.player.wait_idle)  # let narration finish
         self._approval = asyncio.get_running_loop().create_future()
-        await self._say(f"Should I {speakable(summary)}? Say yes or no.", state=CONFIRMING)
+        warn = re.match(r"\(careful: (.*?)\) (.*)", summary)  # an action nobody asked for
+        question = (
+            f"Careful, {warn.group(1)}. Should I {speakable(warn.group(2))}?"
+            if warn
+            else (f"Should I {speakable(summary)}?")
+        )
+        await self._say(f"{question} Say yes or no.", state=CONFIRMING)
         self._set(CONFIRMING, note=summary)
         try:
             answer = await asyncio.wait_for(self._approval, APPROVAL_TIMEOUT)

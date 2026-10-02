@@ -70,6 +70,29 @@ SECRETS = [
 SECRET_NAMES = ["id_rsa*", "id_ed25519*", "*.pem", "*.key", ".env", ".env.*", "*.kdbx"]
 
 
+DELETERS = {"rm", "rmdir", "unlink", "shred", "srm", "wipe"}
+TRASH_HINT = (
+    "TARS doesn't delete permanently: use trash_path (moves it to the Trash, so it can be undone)"
+)
+
+
+def _command_words(cmd: str) -> list[list[str]]:
+    """argv of each command in a pipeline / list (a | b; c && d), env assignments dropped."""
+    out = []
+    for seg in re.split(r"\|\||&&|[|;&\n]", cmd):
+        try:
+            words = shlex.split(seg)
+        except ValueError:
+            continue
+        while words and (
+            "=" in words[0].split("/")[0] or words[0] in ("env", "nohup", "nice", "time", "command")
+        ):
+            words = words[1:]
+        if words:
+            out.append(words)
+    return out
+
+
 def classify_command(cmd: str, home: Path) -> tuple[Tier, str]:
     """Returns (tier, reason). Raises Denied for commands that are never allowed."""
     if not cmd.strip():
@@ -85,6 +108,18 @@ def classify_command(cmd: str, home: Path) -> tuple[Tier, str]:
         raise Denied(f"unparseable command: {e}") from e
     if any(w in NEVER for w in words) or any(Path(w).name in NEVER for w in words):
         raise Denied("needs root or is a disk tool; run it yourself")
+    for argv in _command_words(cmd):
+        prog = Path(argv[0]).name
+        if (
+            prog in DELETERS
+            or (prog == "find" and "-delete" in argv)
+            or (
+                prog == "git"
+                and "clean" in argv
+                and any(a.startswith("-") and "f" in a for a in argv)
+            )
+        ):
+            raise Denied(TRASH_HINT)
     # Pipelines of read-only commands stay read-only; anything else needs approval.
     if SHELL_CONTROL.search(cmd):
         return Tier.T2, "uses shell control operators or redirection"

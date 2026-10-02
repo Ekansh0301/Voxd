@@ -78,7 +78,8 @@ def read_file(ctx: Context, path: str) -> str:
         return f"{_rel(p, ctx)} is a binary file ({_size(p.stat().st_size)})"
     text = data.decode("utf-8", errors="replace")
     cut = f"\n… (truncated, {len(text) - MAX_READ} more characters)" if len(text) > MAX_READ else ""
-    return text[:MAX_READ] + cut
+    lines = text.count("\n") + (0 if text.endswith("\n") or not text else 1)
+    return text[:MAX_READ] + cut + f"\n[{lines} lines]"  # small models miscount newlines
 
 
 def find_files(ctx: Context, pattern: str, under: str = "~", limit: int = 30) -> str:

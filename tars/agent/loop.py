@@ -9,8 +9,11 @@ continues until the model answers in text or the step budget runs out.
 
 import json
 import logging
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
+
+import httpx
 
 from tars.agent.tools import Context, Registry
 from tars.llm.client import stream_turn
@@ -26,6 +29,45 @@ class TurnResult:
     answer: str
     steps: list[dict] = field(default_factory=list)  # [{"tool", "args", "result"}]
     stopped: str | None = None  # why the loop ended early, if it did
+
+
+# The model has 8192 tokens; system prompt + 40-odd tool schemas take ~4250 and the answer
+# up to 400, which leaves ~3500 tokens (~11000 characters) for history and this turn.
+CONTEXT_CHARS = 11000
+KEEP_FULL = 2  # latest tool results kept whole
+
+
+def _fit(messages: list[dict], budget: int = CONTEXT_CHARS) -> None:
+    """Shorten older tool results, oldest first, until the conversation fits."""
+
+    def size() -> int:
+        return sum(
+            len(str(m.get("content") or "")) + len(json.dumps(m.get("tool_calls", "")))
+            for m in messages[1:]
+        )
+
+    tools = [m for m in messages if m.get("role") == "tool"][:-KEEP_FULL]
+    for m in tools:
+        if size() <= budget:
+            return
+        text = str(m.get("content") or "")
+        if len(text) > 300:
+            m["content"] = text[:240] + "\n… (older result shortened to save room)"
+
+
+# Tools whose output can carry someone else's text (files, pages, screens, terminals).
+UNTRUSTED = {"read_file", "web_read", "read_page", "web_search", "screen_context", "read_screen",
+             "read_terminal", "look_at_screen", "recall", "list_tasks"}  # fmt: skip
+
+
+def _mentioned(args: dict, request: str) -> bool:
+    """Did the user's own request name what this call acts on?"""
+    req = request.lower()
+    for v in args.values():
+        for word in re.findall(r"[\w.-]{3,}", str(v).lower()):
+            if word not in ("home", "the", "and") and word in req:
+                return True
+    return not args
 
 
 def _wrap(name: str, result: str) -> str:
@@ -53,15 +95,28 @@ async def run_turn(
     tools = registry.schemas(tool_names)
     steps: list[dict] = []
     seen: dict[str, int] = {}
+    request = next(
+        (str(m.get("content", "")) for m in reversed(messages) if m.get("role") == "user"), ""
+    )
     for _ in range(MAX_STEPS):
         text: list[str] = []
         calls: list[dict] = []
-        async for kind, value in stream_turn(endpoint, model, messages, tools=tools, **llm_kw):
-            if kind == "text":
-                text.append(value)  # type: ignore[arg-type]
-                on_text(value)  # type: ignore[arg-type]
-            else:
-                calls = value  # type: ignore[assignment]
+        _fit(messages)
+        try:
+            async for kind, value in stream_turn(endpoint, model, messages, tools=tools, **llm_kw):
+                if kind == "text":
+                    text.append(value)  # type: ignore[arg-type]
+                    on_text(value)  # type: ignore[arg-type]
+                else:
+                    calls = value  # type: ignore[assignment]
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code != 400:
+                raise
+            log.warning("the model rejected the request (likely too long for its context)")
+            done = ", ".join(s["tool"] for s in steps) or "nothing yet"
+            answer = f"This task got too long for me to finish in one go. So far I did: {done}."
+            messages.append({"role": "assistant", "content": answer})
+            return TurnResult(answer, steps, stopped="context")
         said = "".join(text).strip()
         if not calls:
             messages.append({"role": "assistant", "content": said})
@@ -83,7 +138,20 @@ async def run_turn(
                 result = "error: you already ran this exact call twice; answer with what you have"
             else:
                 on_tool(c["name"], c["arguments"])
-                result = await registry.call(ctx, c["name"], c["arguments"])
+                read = next((st for st in steps if st["tool"] in UNTRUSTED), None)
+                original = ctx.approve
+                if read and original and not _mentioned(c["arguments"], request):
+                    source = str(next(iter(read["args"].values()), read["tool"]))[:60]
+
+                    async def careful(summary: str, _orig=original, _src=source) -> bool:
+                        return bool(await _orig(f"(careful: you didn't ask for this; it came right after "
+                                                f"reading {_src}) {summary}"))  # fmt: skip
+
+                    ctx.approve = careful
+                try:
+                    result = await registry.call(ctx, c["name"], c["arguments"])
+                finally:
+                    ctx.approve = original
             log.info(f"tool {c['name']}({c['arguments']}) -> {result[:120]!r}")
             steps.append({"tool": c["name"], "args": c["arguments"], "result": result})
             messages.append(

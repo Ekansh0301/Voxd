@@ -148,10 +148,38 @@ async def _click(ctx: Context, name: str | None, element_id: int | None, observe
     return f"{result}\n{await _after_action()}" if observe else result
 
 
+CALC_KEYS = {"×": "*", "x": "*", "*": "*", "÷": "/", "/": "/", "−": "-", "-": "-", "+": "+",
+             "=": "\n", ".": ".", "(": "(", ")": ")", "%": "%"}  # fmt: skip
+
+
+def _calculator_text(names: list[str]) -> str | None:
+    """['1', '2', '×', '7', '='] -> '12*7\n', when every name is a calculator key."""
+    out = []
+    for n in names:
+        n = n.strip()
+        if n.isdigit() and len(n) == 1:
+            out.append(n)
+        elif n in CALC_KEYS:
+            out.append(CALC_KEYS[n])
+        else:
+            return None
+    return "".join(out)
+
+
 async def click_sequence(ctx: Context, names: list[str]) -> str:
     """Press several elements in order, e.g. calculator keys or a menu path."""
     done: list[str] = []
     names = [str(n) for n in names[:30]]
+    text = _calculator_text(names)
+    if text and "calculator" in _last_window.lower() and ctx.desktop:
+        # Clicking keys one by one is where the model slips (123×7 for 12×7): type instead,
+        # after clearing what an earlier attempt left on the display.
+        from tars.tools.keys import press_keys, type_text
+
+        await press_keys(ctx, "Escape", window="calculator")
+        expr, enter = text.rstrip("\n"), text.endswith("\n")
+        out = await type_text(ctx, expr, then_key="Enter" if enter else "", window="calculator")
+        return f"{out} (typed instead of clicking; the display was cleared first)"
     for i, name in enumerate(names):
         result = await _click(ctx, name, None, observe=i == len(names) - 1)
         if result.startswith("error") or "failed" in result:

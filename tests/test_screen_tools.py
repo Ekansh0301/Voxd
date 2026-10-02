@@ -77,3 +77,11 @@ def test_change_report_ignores_shifted_ids():
     out = _diff(before, after)
     assert "Total: 3" in out and "Total: 7" in out and "OK" not in out
     assert _diff(before, before.replace("[1]", "[9]")) == "no visible change in the window"
+
+
+def test_calculator_keys_become_typing():
+    from tars.tools.screen import _calculator_text
+
+    assert _calculator_text(["1", "2", "×", "7", "="]) == "12*7\n"
+    assert _calculator_text(["3", "÷", "4"]) == "3/4"
+    assert _calculator_text(["File", "Open"]) is None  # a menu path stays clicks

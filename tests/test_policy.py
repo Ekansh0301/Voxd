@@ -20,7 +20,7 @@ def test_read_only_commands_are_t0(cmd):
 @pytest.mark.parametrize(
     "cmd",
     ["mkdir notes", "mv a.txt b.txt", "git push", "pip install numpy", "echo hi > f.txt",
-     "ls; rm x", "find . -name '*.tmp' -delete", "python3 script.py", "cat a | tee b",
+     "ls; mkdir x", "python3 script.py", "cat a | tee b",
      "ls && touch x", "kill 1234"],
 )  # fmt: skip
 def test_changes_need_approval(cmd):
@@ -79,3 +79,18 @@ def test_gui_apps_not_started_from_sandbox():
     assert gui_launch("MOZ_X=1 /usr/bin/firefox") == "firefox"
     assert gui_launch("ls ~/Downloads") is None
     assert gui_launch("grep firefox notes.txt") is None
+
+
+def test_no_permanent_deletes(tmp_path):
+    for cmd in (
+        "rm ~/Downloads/old.log",
+        "rm -f a.txt",
+        "cd x && rm b",
+        "find . -name '*.log' -delete",
+        "git clean -fd",
+        "unlink f",
+        "FOO=1 rmdir build",
+    ):
+        with pytest.raises(Denied, match="trash_path"):
+            classify_command(cmd, tmp_path)
+    assert classify_command("grep rm notes.txt", tmp_path)[0] == Tier.T0  # a word, not the command

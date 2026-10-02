@@ -27,6 +27,7 @@ def sandbox_argv(cmd: str, home: Path, writable: bool) -> list[str]:
     ]  # fmt: skip
     # Mount home explicitly (after the empty /tmp, in case home lives under /tmp).
     argv += ["--bind" if writable else "--ro-bind", str(home), str(home)]
+    argv += ["--setenv", "HOME", str(home)]  # "~" = the home TARS works in (a temp one in evals)
     if not writable:
         argv += ["--unshare-net"]
     if not writable:  # tools that write caches (mypy, ruff, pylint) use the sandbox's /tmp

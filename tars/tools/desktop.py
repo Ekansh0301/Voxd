@@ -73,12 +73,43 @@ def _apps() -> dict[str, tuple[str, str]]:
     return found
 
 
-def open_app(ctx: Context, name: str) -> str:
+async def _wait_for_window(names: list[str], timeout: float = 20) -> str:
+    """Wait until the app's window is up, so the next read_screen sees its contents."""
+    import asyncio
+
+    from tars.perception.windows import NoExtension, find, list_windows
+
+    try:
+        before = {w.id for w in await list_windows()}
+        loop = asyncio.get_running_loop()
+        end = loop.time() + timeout
+        while loop.time() < end:
+            wins = await list_windows()
+            for n in names:
+                w = find(n, wins)
+                if w and n in f"{w.app}{w.wm_class}{w.title}".lower().replace(
+                    " ", ""
+                ):  # a real match
+                    if w.id not in before:
+                        await asyncio.sleep(2.5)  # just appeared: let it draw its contents
+                    return " (its window is up)"
+            await asyncio.sleep(0.5)
+        return " (its window hasn't appeared yet; check with read_screen in a moment)"
+    except NoExtension:
+        await asyncio.sleep(3)
+        return ""
+
+
+async def open_app(ctx: Context, name: str) -> str:
     from tars.tools.apps import AppRegistry, launch
 
     registered = AppRegistry().resolve(name)  # config/apps.yaml: right flags, access rules
     if registered is not None:
-        return launch(ctx, registered)
+        out = launch(ctx, registered)
+        if ctx.desktop:
+            names = [registered.key, *registered.aliases, Path(registered.launch[0]).name]
+            out += await _wait_for_window([n.replace(" ", "").lower() for n in names])
+        return out
     apps = _apps()
     q = ALIASES.get(name.lower().strip(), name.lower().strip())
     close = difflib.get_close_matches(q, list(apps), n=1, cutoff=0.6)
@@ -87,6 +118,10 @@ def open_app(ctx: Context, name: str) -> str:
         return f"error: no installed app matches {name!r}"
     desktop_id, display = apps[key]
     _run(ctx, ["gtk-launch", desktop_id], f"launch {desktop_id}")
+    if ctx.desktop:
+        return f"opened {display}" + await _wait_for_window(
+            [display.lower(), desktop_id.split(".")[-1].lower()]
+        )
     return f"opened {display}"
 
 
