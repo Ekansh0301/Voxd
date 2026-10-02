@@ -1,7 +1,7 @@
 """
 Start/stop a llama.cpp `llama-server` process and talk to it.
 
-Used by the Phase 0 benchmarks now and by the model manager later. Only the
+Used by the benchmarks (bench/); at run time TARS goes through llama-swap (tars/llm/swap.py). Only the
 native endpoints we rely on are wrapped: /health, /tokenize, /completion and
 the OpenAI-compatible /v1/chat/completions (which llama-server extends with a
 `timings` object).

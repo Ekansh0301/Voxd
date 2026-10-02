@@ -1,5 +1,5 @@
 {
-  "_comment": "MCP tool servers TARS starts (Claude Desktop format + optional enabled/tools/tiers). Personal additions go in ~/.config/tars/mcp.json. Phase 3 adds the Firefox and desktop (AT-SPI) servers here.",
+  "_comment": "MCP tool servers TARS starts (Claude Desktop format + optional enabled/tools/tiers). Personal additions go in ~/.config/tars/mcp.json. The research browser (a headless Firefox) is started by tars/tools/research.py on demand, not from here.",
   "mcpServers": {
     "firefox": {
       "command": "npx",

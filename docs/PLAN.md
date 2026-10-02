@@ -1,6 +1,8 @@
 # TARS: A Local, Hands-Free Desktop Agent on a 4 GB GPU
 
 > Status: design plan, written 2026-09-30. It replaces the v1 prototype architecture: v1 was single-shot voice commands, and v2 is a multi-agent system that operates the laptop.
+>
+> **Progress:** Phases 0–3 are done (2026-10-02). This document is the design and roadmap; what's built is described in [ARCHITECTURE.md](ARCHITECTURE.md), and progress against each phase in [STATUS.md](STATUS.md).
 > Decisions made (2026-09-30):
 > - **Name:** TARS, after Interstellar's robot, on your laptop "tardis".
 > - **Browser:** Firefox, with Outlook web for mail.
@@ -226,7 +228,7 @@ Core reply tokens ─► sentence chunker ─► TTS queue ─► playback (chun
 - **Emotion.** The Conductor may emit `{"emotion": "happy|concerned|focused|playful"}` in its schema, which maps to the Live2D model's expressions.
 - **Reuse.** Open-LLM-VTuber already runs Live2D on the official Cubism 5 Web SDK with a desktop-pet overlay and lip-sync. Lift its frontend code rather than writing it from scratch.
 
-### 5.4 Personality: TARS settings
+### 5.3 Personality: TARS settings
 Just like the film, the personality has sliders in `config/tars.yaml` that you can change by voice ("TARS, humor 60%"):
 - `humor` (0–100, default 60): wit level in replies.
 - `honesty` (default 90): how bluntly it reports failures and uncertainty. It never goes below telling you when an action failed.
@@ -234,7 +236,7 @@ Just like the film, the personality has sliders in `config/tars.yaml` that you c
 
 These are injected into the Conductor's cached prefix, so there's no per-turn token cost.
 
-### 5.3 UI panels (Qt shell)
+### 5.4 UI panels (Qt shell)
 
 - **Chat:** typed input, history, and streaming output.
 - **Task tree:** live view of the root task, delegated sub-tasks, step logs, and screenshots or snapshots as evidence.
@@ -684,7 +686,7 @@ Every LLM call is logged to JSONL: role, prompt hash, tokens in and out, cache h
 
 ## 14. New repo layout
 
-*Current state (end of Phase 0):* `tars/`, `tests/`, `bench/`, `config/`, `deploy/`, `scripts/`, `docs/`, plus `legacy/` (the v1 prototype, kept runnable as a baseline until Phase 2–3). The tree below is the target the phases grow into.
+*Current state (end of Phase 3):* the package as built is described in [ARCHITECTURE.md](ARCHITECTURE.md): `tars/agent`, `tools`, `perception`, `voice`, `ui`, `llm`, `mcp`, `memory`, with the GNOME Shell and VS Code extensions under `deploy/`. Tools are built in rather than separate MCP servers. The tree below was the original target; Phase 4 adds `agents/` and `skills/`.
 
 ```
 tars/
@@ -748,6 +750,9 @@ Deliberately **not** used as the core: LangChain, CrewAI or AutoGen, because the
 This assumes part-time work at about 15–20 h/week. Every phase has **exit criteria measured by evals**, not vibes.
 
 ### Phase 0 — Foundation and measurement (1–2 weeks)
+
+> **Done.** What was built, and where it differs from the plan below: [STATUS.md](STATUS.md).
+
 - Fix the v1 blockers so there is something working to compare against:
   - the import bug
   - the `_piper_proc` bug
@@ -762,30 +767,14 @@ This assumes part-time work at about 15–20 h/week. Every phase has **exit crit
 
 ### Phase 1 — Voice v2 and avatar v1 (2 weeks)
 
-> **Progress (2026-10-01):**
-> - Done: the voice loop (`python -m tars.voice`), `tars-pttd` for Right Ctrl on Wayland, the speech chunker, Kokoro `af_heart`, and interrupting with the key.
-> - Measured from key release to first audio: **~2.8–3.2 s**. That's speech-to-text 1.5 s (CPU Whisper pads every clip to 30 s), the Brain's first token +0.3 s, and Kokoro's first chunk +1.0 s.
-> - Whisper small.en on the GPU takes 0.47 s and fits next to the Brain (3550/3714 MiB). It needs cuDNN 9 in `.venv`. Parakeet on the CPU (no padding) is the alternative. Choose on your recordings.
-> - **GPU Whisper adopted** (cuDNN 9 in `.venv`). Speech-to-text is now 0.55 s, and key release → first audio is **~1.7 s**. VRAM is 3.55 of 3.71 GB with the Brain, stable across turns.
-> - **Live2D avatar done** (Mao PRO, head-and-shoulders framing). It's built on the **official Cubism 5 Web framework**, because pixi-live2d-display (2022, Cubism 4 framework) crashes on Cubism 5 models and Core 6. A build script patches the SDK's Demo from your local SDK copy, so none of Live2D's code is in the repo. It's served to an XWayland Qt WebEngine overlay through a private `tars://` scheme (no network port). State and mouth level stream over a token-protected localhost WebSocket.
-> - **First real session (2026-10-01):** latency 1.4–2.0 s and push-to-talk interrupt worked. Whisper hit CUDA out-of-memory after a few turns: Brain 3.14 GB plus Whisper's 0.48 GB peak left only ~100 MB of slack. Fixed with Brain `-np 1 -ub 256` (−144 MiB, same prefill speed), a cap on CTranslate2's cache, temperature-0 decoding, and a session-long CPU fallback after any CUDA error. A soak test with interruptions peaked at 3538 of 3714 MiB. "TARS" was heard as "WhatsApp" because of over-broad hotwords; they're now a curated list in config. The persona no longer volunteers "can't do that yet". Personality voice commands ("humor 40%") are done, and `--save-audio` collects real utterances for the STT benchmark.
-> - Left for Phase 1: interrupting while speaking needs echo cancellation once barge-in by voice is added (push-to-talk interrupt already works), and the STT model choice from your recordings.
+> **Done.** What was built, and where it differs from the plan below: [STATUS.md](STATUS.md).
 - A separate voice process: PTT capture through the GlobalShortcuts portal (evdev fallback), Silero VAD trimming, turn manager, interrupt-on-PTT, sentence-streamed TTS, hotwords and entity correction for Indian English.
 - The Qt shell (under XWayland, for always-on-top) with a transparent WebEngine **Live2D** avatar (sample model), the state machine, RMS lip-sync, TARS personality sliders, and chat.
 - **Exit:** under 1.5 s to first audio on the fast path; STT word error rate ≤ 8% on your recorded commands; PTT interrupt stops speech in under 200 ms; no UI calls from worker threads (enforced by signals).
 
 ### Phase 2 — Agent core and MCP (3 weeks)
 
-> **Progress (2026-10-01): core done.**
-> - **Agent loop:** native tool calling, streamed so answers still start speaking early; up to 8 steps, loop detection, and tool output labelled as data.
-> - **22 built-in tools with permission tiers:** files, sandboxed shell, desktop, media, volume, timers, system status, memory.
-> - **Policy engine in code:** `shlex` command classification, secret paths, home-only writes, Trash instead of delete.
-> - **Spoken approvals** with a "confirming" avatar state.
-> - **Memory:** SQLite with FTS5 (facts and turns), with relevant facts injected per turn.
-> - **Fast-path router** for unambiguous commands.
-> - **Stdlib MCP client and manager** (tiers from tool annotations; unknown tools are T2).
-> - **Evals** (`python -m evals.agent_eval`): **22/22 everyday, 7/7 safety**, median 1.7 s per task. They caught three real bugs, all fixed: move-into-new-folder lost files, read+write "copies" corrupted files, and the sandbox hid a home folder under /tmp.
-> - **Deviations:** built-in tools instead of separate `tars-system`/`tars-shell` MCP servers (lower latency; they can still be exposed over MCP later). `find_tool` is deferred until the tool count needs it. `bashlex` is replaced by a conservative `shlex` classifier (anything with shell control operators asks first). Embeddings in memory are deferred.
+> **Done.** What was built, and where it differs from the plan below: [STATUS.md](STATUS.md).
 - Bus, tasks, blackboard, GPU scheduler, and the single-agent loop with JSON-schema actions, task card and verification.
 - MCP client manager, registry, compaction and `find_tool`.
 - `tars-system` and `tars-shell` (sandbox, bashlex), plus reference filesystem and git servers.
@@ -794,35 +783,7 @@ This assumes part-time work at about 15–20 h/week. Every phase has **exit crit
 
 ### Phase 3 — Real screen reading and control (3 weeks)
 
-> **Progress (2026-10-01):**
-> - **Accessibility-tree reading and acting** over D-Bus (jeepney, no OCR). Concurrent breadth-first walk: 61 elements in about 85 ms. The model sees one compact line per element with **unique names instead of numeric ids** (`button 'OK (2)'`); with ids the 4B model clicked the wrong elements.
-> - **Screen tools:** `read_screen`, `list_windows`, `click`/`click_sequence`/`type_into` by name. Send/Submit/Delete/Pay-like buttons need approval; password fields are refused; browser pages on blocked sites aren't read (DocURL check).
-> - **Vision fallback:** the Screenshot portal (525 ms, permission remembered), with captures moved to a private temp file and deleted. The Brain's projector reads them, with optional region zoom: 14 px email text and a calculator display read correctly in 3–4 s.
-> - **`read_terminal`** via tmux panes.
-> - **Evals unchanged** with 29 tools: 22/22 + 7/7.
-> - **Findings on this desktop:** Wayland gives every window the position (0, 0), so element→screen coordinates need the planned GNOME Shell extension. The GTK4 VTE terminal and GNOME Calculator 50's display aren't exposed via AT-SPI (vision covers them). Flutter (Spotube) and Electron (Claude desktop) expose almost nothing without flags.
-> - **Weak spot:** multi-button GUI sequences with the 4B model (it typed 123×7 for 12×7) and verifying before claiming. Keyboard input via the RemoteDesktop portal ("type 12*7, Enter") and the browser driver are the better paths.
-> - **Firefox:** your real Firefox via the "Firefox (TARS)" launcher and firefox-devtools-mcp. Its raw tools are hidden; `web_*` wrappers enforce sites.yaml, ask before Send/Submit-like clicks and never fill password fields.
-> - **Your apps** (`config/apps.yaml`): open by name with the right flags (Electron apps get `--force-renderer-accessibility` so their buttons are readable), PDFs in Okular, VS Code at a file and line, Ghostty in a folder (commands run inside tmux so TARS can read the output), and Super Productivity tasks with reminders through its local REST API. Times like "tomorrow at 9" are parsed in code, not by the model, and each message carries the current time.
-> - **Coding aids:** `check_code` (syntax check, then ruff / pylint / mypy from the project's .venv if present, in the sandbox), `edit_file` (replaces one exact snippet, shows the diff, asks first, keeps a backup) and `undo_edit`. A missing path answers "did you mean ~/code/app.py?", which fixed the 4B model dropping folders.
-> - **Spotube** (Flutter: no accessibility tree at all): `play_music` matches the song against your own library (saved queue + history, read-only from Spotube's database, nothing searched online) and plays it through Spotube Connect's local WebSocket; "play some music" resumes over MPRIS. Connect is off by default and, when on, listens on all interfaces without a password, so on shared Wi-Fi it needs a firewall rule. Songs outside your library wait for keyboard input (RemoteDesktop portal) to use Spotube's search.
-> - **Termius** (Electron, readable with `--force-renderer-accessibility`): `termius_connect` finds the saved host cards (Ada, Turing) and presses one. **Super Productivity:** reminders go in through its local REST API (no token; it only accepts title/notes/due time, not its own alarm), and TARS adds the alarm as a transient systemd user timer that pops a notification. Its header icons, Sync included, are unnamed for accessibility and hidden while the reminders dialog is up, so Sync waits for keyboard input (its shortcut is Ctrl+S).
-> - **Screenshots:** TARS registers as `org.tars.TARS` with the portal and drops its permission after each capture. Before, the "Allow" was stored under the empty app id shared by all non-Flatpak apps, which made Flameshot take silent GNOME screenshots.
-> - **Keyboard input** via the RemoteDesktop portal under `org.tars.TARS`: approved once, then a restore token (0600) starts later sessions with no dialog in about 0.1 s. `type_text` / `press_keys` check the focused window first: terminals, password fields and blocked sites are refused; Ctrl+Enter and closing shortcuts need approval. Live: typed 12*7 Enter into Calculator → 84; typing into Ghostty refused.
-> - **Window focus is the gap:** GNOME gives windows started from the background a "ready" notification instead of focus, and AT-SPI GrabFocus is refused, so focusing an app needs the GNOME Shell extension (next). GNOME 50 also shows portal access dialogs only to the focused app, so the screenshot permission for `org.tars.TARS` is granted once with busctl.
-> - **GNOME Shell extension "TARS windows"** (`deploy/gnome-extension`, `scripts/install_gnome_extension.sh`): D-Bus `org.tars.Windows` with only `List` (titles, app ids, geometry, focus) and `Activate`. `focus_window`, and `type_text`/`press_keys` with `window=` focus the app first and re-check before typing. `sync_tasks` = focus Super Productivity + Ctrl+S.
-> - **Evals with 43 tools:** 30/30 everyday (incl. fix-a-bug, check-a-file, PDF, VS Code, reminder, play a song, Termius) + 7/7 safety, median 1.8 s.
-> - **Pointer input** (same portal session, approved once): exact clicks without screen-casting by pushing the pointer into the top-left corner and moving relatively (virtual pointers get no acceleration); positions come from the GNOME extension.
-> - **Spotube, any song:** focus → Search → type → right-click the top result → "Play next" → Next, confirmed over MPRIS (7.4 s; "Play next" keeps your queue, a plain click asks to clear it). Live: "Believer", "death bed by Powfu". **Super Productivity sync** verified live after re-login.
-> - **Kill switch and control border:** tap Right Ctrl while TARS is busy (or "Stop" in the top-bar menu, or type "stop") cancels the turn, releases held keys and buttons, and kills a running shell command. While a clicking/typing tool runs, an orange frame around the screen says how to stop it; it passes clicks through and never takes focus.
-> - **"Explain the error on my screen"** (`screen_context`): the working window's content by kind: the tmux pane last typed in; VS Code's open file (title + VS Code's saved state), its checks and the code at the reported lines; Firefox's page text; else accessibility or vision. Live eval `evals/screen_eval.py`: **3/3** (terminal, VS Code, Firefox), warm answers in 2.5–3.4 s. **This meets the phase's exit test.**
-> - **Also:** `tars` command, app icon, top-bar menu, subtitles and a text box; ChatGPT round trip (Firefox brought forward for input; answers read by script).
-> - **Change reports:** click / type_into return what changed in the window (or the dialog that opened).
-> - **VS Code bridge extension** (`deploy/vscode-extension`): active file, cursor, Problems, integrated-terminal output over a private socket; used by `screen_context`.
-> - **Hidden-browser research:** `web_search` (DuckDuckGo) and `read_page` in a headless Firefox with its own profile, quit after 5 idle minutes.
-> - **`click_on_screen`** for apps without accessibility: OCR for labels (1–2 px), vision boxes for icons (~7 px).
-> - **Safety:** `rm`/`unlink`/`find -delete`/`git clean -f` refused in favour of the Trash; the sandbox's `~` is the home TARS works in; an approval for something the user didn't mention, right after reading a file/page/screen, is spoken as a warning ("Careful, you didn't ask for this…"). Long tasks trim older tool results instead of overflowing the 8k context.
-> - **Live desktop + browser eval** (`evals/live_eval.py`, 12 real-app tasks): **11/12 (92%)** on the final runs, against the ≥ 65% target. The two misses seen across runs were a one-off Spotube timing slip and a rare (~1 in 11) prompt-injection slip by the 4B model, which the approval question still caught. **Phase 3 is complete.**
+> **Done.** What was built, and where it differs from the plan below: [STATUS.md](STATUS.md).
 - `tars-desktop`: AT-SPI snapshot, act, find and events; compact format; focus scoping; change diffs.
 - firefox-devtools-mcp attached to your real Firefox (plus the launcher script), the headless Playwright browser for background work, the AT-SPI fallback for Firefox, tmux terminal, and the VS Code extension.
 - Vision fallback: YOLO + OCR + Set-of-Mark, the projector path, and the grounder swap via llama-swap.

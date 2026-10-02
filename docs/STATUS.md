@@ -1,0 +1,70 @@
+# Status
+
+Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-10-02.
+
+| Phase | | |
+|---|---|---|
+| 0. Foundation and measurement | ✅ done | models chosen by benchmark ([BENCHMARKS.md](BENCHMARKS.md)) |
+| 1. Voice and avatar | ✅ done (one item open) | key release → first speech ~1.6 s; STT model choice waits for your recordings |
+| 2. Agent core and MCP | ✅ done | 56 tools, policy, approvals, memory |
+| 3. Screen reading and control | ✅ done | live eval 11/12 (target ≥ 65%) |
+| 4. Multi-agent, recursion, skills | not started | |
+| 5. Capabilities (mail, forms, cloud) | next: Outlook drafting | research is done early |
+| 6. Proactive monitoring | not started | |
+| 7. Hardening and learning | ongoing | |
+
+## Phase 0: foundation
+
+- The v1 blockers fixed; repo, config, tests and CI set up; llama.cpp and llama-swap
+  installed, with Ollama off the critical path.
+- **Brain: Qwen3.5-4B Q4_K_M** on the GPU (~37 tok/s, 92% tool choice on 60 commands).
+  llama.cpp needs the Pascal/MMQ kernel build on this GPU (3× faster prefill).
+- **Speech:** Whisper `small.en` on the GPU (0.5 s); **voice:** Kokoro `af_heart`.
+
+## Phase 1: voice and avatar
+
+- Push-to-talk on Wayland through `tars-pttd` (Right Ctrl only), streamed speech,
+  interrupting with the key, personality commands ("humor 40%").
+- Live2D avatar (Mao) on the official Cubism 5 framework in a transparent overlay,
+  with lip-sync, subtitles and a text box.
+- **Open:** choosing the speech model from your own recordings; voice barge-in
+  (needs echo cancellation).
+
+## Phase 2: agent core
+
+- Native tool calling, streamed so speech starts early; loop detection; context
+  budgeting for long tasks; prompt-cache priming (first token ~0.35 s).
+- Permission tiers and a policy engine in code; bubblewrap sandbox; spoken approvals.
+- SQLite memory with full-text search; a fast path for unambiguous commands; an MCP client.
+- Built-in tools instead of separate MCP servers (lower latency); embeddings deferred.
+
+## Phase 3: screen reading and control
+
+- **Reading:** accessibility trees with unique element names, change reports after
+  actions, screenshots with vision, OCR, tmux terminals, VS Code through its own
+  extension, your Firefox's DOM.
+- **Acting:** AT-SPI actions; keyboard and mouse through the RemoteDesktop portal;
+  window focus through the TARS GNOME extension; exact clicks without screen-casting.
+- **Firefox:** your real Firefox (TARS) with site rules; ChatGPT and other AI sites
+  (type, send, read the answer); a hidden headless Firefox for research.
+- **Your apps:** Spotube (songs and playlists), Super Productivity (reminders, tasks,
+  sync), Termius, VS Code, Okular, Ghostty.
+- **Control:** kill switch (tap Right Ctrl), orange control border, top-bar menu.
+- **"Explain the error on my screen"** works in the terminal, VS Code (editor and
+  terminal) and Firefox: the phase's exit test.
+- **Not done, by choice:** the Playwright browser (the headless Firefox does the job
+  with no new install), YOLO/Set-of-Mark detection (OCR + vision boxes were enough),
+  and a separate `tars-desktop` MCP server.
+
+## Waiting on you
+
+- Voice recordings for the speech-recognition comparison (`bench.record_commands`).
+- Choosing a cloud model provider for hard tasks (Phase 5).
+- Trying "connect to ada" in Termius and the Right Ctrl tap-to-stop.
+
+## Known limits
+
+- The 4B model sometimes slips on long button sequences or follows planted text;
+  typing instead of clicking and the "careful" approval cover the main cases.
+- Spotube automation depends on its window layout (maximised).
+- GTK 4 popup menus and some apps' contents aren't exposed to accessibility.

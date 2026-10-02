@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tars"
-version = "0.1.0"
+version = "0.3.0"  # = the roadmap phase reached
 description = "TARS: a local, hands-free desktop agent for Ubuntu that runs on a 4 GB GPU"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -31,10 +31,11 @@ dependencies = [
     "PyQt6==6.11.0",
     "PyQt6-WebEngine==6.11.0",
     "jeepney==0.9.0",
+    "Pillow==12.3.0",  # screenshots: OCR, vision, screen checks
 ]
 
 [project.optional-dependencies]
-bench = ["nvidia-ml-py", "jiwer", "Pillow"]
+bench = ["nvidia-ml-py", "jiwer"]
 # GPU Whisper needs cuDNN 9. setup.sh installs it with --no-deps, because its cuBLAS
 # dependency (~450 MB) duplicates the CUDA 12.x toolkit's cuBLAS already on the system.
 gpu-stt = ["nvidia-cudnn-cu12>=9,<10"]

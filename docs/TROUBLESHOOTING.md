@@ -1,0 +1,76 @@
+# Troubleshooting
+
+Problems met while building TARS on this laptop, and their fixes. TARS logs to the
+terminal you start it from, or to `~/.local/share/tars/logs/tars.log` when started
+from the app icon.
+
+## Speech
+
+**It mishears me** ("Telling here Jew" for "tell me a joke"). Usually the microphone
+is clipping: at 100% input volume the built-in mic flattens loud speech, and
+TARS warns about it at startup. Lower it: `wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 45%`.
+To measure, run `tars --save-audio` for a few phrases; clips go to
+`~/.local/share/tars/recordings/`.
+
+**CUDA out of memory.** Whisper and the 4B model share 3.7 GB. The llama-swap
+template already uses `-np 1 -ub 256`; if it happens anyway, speech recognition
+falls back to the CPU for the rest of the session (slower, still works).
+
+## Speed
+
+**Replies are slow.** Check you're plugged in (the GPU drops to ~5 tok/s on battery)
+and not overheating (`get_system_info` reports temperatures). The first answer after
+start-up is slower while the prompt cache is primed (~11 s, done in the background).
+
+## Firefox
+
+**"Firefox is open normally."** TARS can only drive Firefox started as
+*Firefox (TARS)*. Close Firefox and ask again; TARS starts it.
+
+**Every browser action fails with "Server terminated early with status 0".**
+The driver's geckodriver was a truncated download in `/tmp` (wiped at reboot).
+TARS now uses the geckodriver inside the Firefox snap via
+`~/.local/share/tars/opt/geckodriver/`; if that link is missing, restart TARS
+(it recreates it).
+
+**Typing into a page hangs.** Firefox draws nothing while it's hidden behind other
+windows, and key presses wait for a frame. TARS brings Firefox forward before typing;
+this needs the GNOME extension.
+
+## Desktop
+
+**TARS can't bring an app to the front / type into it.** The GNOME extension isn't
+loaded: run `scripts/install_gnome_extension.sh`, then log out and back in.
+Check: `gnome-extensions info tars-windows@tars.local` should say `ACTIVE`.
+
+**"TARS has no screenshot permission."** Grant it once (the `busctl` command in
+[SETUP.md](SETUP.md)). GNOME 50 can't show the prompt to TARS because it has no window.
+
+**Flameshot flashes and makes a shutter sound.** A screenshot permission was stored
+for all non-Flatpak apps (app id `""`), which affects Flameshot too. TARS now uses its
+own app id; remove the shared one with
+`busctl … DeletePermission sss screenshot screenshot ""`.
+
+**An app's buttons can't be read.** Electron apps (Termius, Super Productivity) need
+`--force-renderer-accessibility`; `config/apps.yaml` launches them with it. Flutter
+apps (Spotube) expose nothing, so TARS uses OCR and vision (`click_on_screen`).
+GTK 4 popup menus aren't exposed to accessibility either.
+
+**Killing a snap app fails with "permission denied".** Snap confinement blocks
+signals from other processes. Stop it through its systemd scope:
+`systemctl --user stop snap.<name>.<...>.scope` (see `/proc/<pid>/cgroup`).
+
+## Apps
+
+**Spotube plays the wrong song.** TARS takes the top search result; add the artist
+("Believer by Imagine Dragons"). The window must be large (maximised): clicks are
+placed by Spotube's layout.
+
+**Reminders appear in Super Productivity but don't alarm.** Its REST API can't set
+its own alarm, so TARS adds one as a systemd user timer: check with
+`systemctl --user list-timers 'tars-reminder-*'`. Timers don't survive a reboot.
+
+## Network
+
+**Downloads hang.** IPv6 is broken on some networks here; the setup script uses
+`curl -4 --http1.1`.

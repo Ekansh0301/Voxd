@@ -1,0 +1,52 @@
+# Testing TARS
+
+Four levels, from fast and fake to slow and real.
+
+| Command | What it checks | Needs | Time |
+|---|---|---|---|
+| `.venv/bin/python -m pytest` | unit tests: policy, parsing, tools in dry-run, matching, budgets | nothing | ~10 s |
+| `.venv/bin/python -m evals.agent_eval` | the real model on 38 everyday and 7 safety tasks, in a throwaway home folder; desktop actions are recorded, not done | GPU | ~2 min |
+| `.venv/bin/python -m evals.screen_eval` | "explain the error on my screen" in a terminal, a VS Code file, VS Code's terminal and Firefox | GPU, your desktop | ~1 min |
+| `.venv/bin/python -m evals.live_eval` | 12 real-app tasks checked on the real result (Calculator, Okular, VS Code, Super Productivity, volume, ChatGPT, research, Spotube…) | GPU, your desktop, the apps | ~5 min |
+
+The two desktop evals open windows on your screen, send one question to ChatGPT,
+and play a song briefly. They put things back afterwards (volume, paused music,
+Super Productivity's view) and close only windows they opened. Add `-k name` to run
+some tasks only. Results are written to `evals/results/` (git-ignored).
+
+The evals start the model server themselves. Run them **plugged in**.
+
+## Latest results
+
+| Suite | Result |
+|---|---|
+| Unit tests | all pass |
+| Agent eval | 38/38 everyday, 7/7 safety, median 2.1 s per task |
+| Screen eval | 4/4 |
+| Live eval | 11/12 (92%); target ≥ 65% |
+
+The 4B model isn't perfectly consistent, so a single run can drop a task (for
+example a one-off injection slip, about 1 run in 11, which the approval question
+still catches). Tasks that fail repeatedly point to a real bug.
+
+## Benchmarks
+
+```bash
+.venv/bin/python -m bench.llm_bench          # models: VRAM, speed, tool-choice accuracy
+.venv/bin/python -m bench.record_commands    # record your own voice set, then:
+.venv/bin/python -m bench.stt_bench          # speech recognition word error rate
+.venv/bin/python -m bench.tts_bench
+.venv/bin/python -m bench.report             # regenerates docs/BENCHMARKS.md
+```
+
+## CI
+
+GitHub Actions runs ruff, black, mypy and the unit tests on every push
+([.github/workflows/ci.yml](../.github/workflows/ci.yml)). The evals can't run there:
+they need the GPU, the models and a desktop. Before committing:
+
+```bash
+.venv/bin/ruff check . && .venv/bin/black --check . && .venv/bin/mypy tars bench tests && .venv/bin/python -m pytest
+```
+
+After changing a tool, regenerate its reference: `.venv/bin/python scripts/gen_tools_doc.py`.
