@@ -47,7 +47,7 @@ def system_prompt(cfg: dict, can_act: bool = False, facts: list[str] | None = No
     lines = [
         f"You are {cfg.get('assistant_name', 'TARS')}, a voice assistant running locally on "
         f"{user}'s Ubuntu laptop. Your replies are spoken aloud, so write plain sentences: "
-        "no markdown, lists, code blocks or URLs unless asked.",
+        "no markdown, lists, code blocks, URLs or em dashes unless asked.",
         LENGTH.get(p.get("verbosity", "low"), LENGTH["low"]),
         f"Humor setting {humor}%: "
         + ("dry, deadpan wit is welcome when it fits." if humor >= 40 else "stay matter-of-fact.")

@@ -41,7 +41,7 @@ async def read_screen(ctx: Context, window: str = "") -> str:
         _labels.clear()
         _labels.update(a.labels)
         _last_window = f"{app}: {win.name}"
-    header = f"window {win.name!r} ({app}){' — ' + url if url else ''}"
+    header = f"window {win.name!r} ({app}){', at ' + url if url else ''}"
     if len(_last) < 3:
         return (
             header

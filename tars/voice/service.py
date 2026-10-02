@@ -137,6 +137,7 @@ class VoiceService:
     def subtitle(self, who: str, text: str):
         """Captions for the avatar window: what was heard/typed, and TARS's words as
         each spoken chunk starts, so the text follows the voice."""
+        text = text.replace(" — ", ", ").replace("—", ", ")  # no em dashes on screen
         self.on_event({"type": "subtitle", "who": who, "text": text})
 
     async def _say(self, text: str, state: str = SPEAKING):

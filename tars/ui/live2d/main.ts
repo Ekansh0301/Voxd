@@ -36,7 +36,7 @@ function setState(next: string, info: Info = {}): void {
   const m = model();
   if (m && EXPRESSION[next]) m.setExpression(EXPRESSION[next]);
   if (next !== 'speaking' && next !== 'confirming') window.__tarsMouth = 0;
-  const extra = info.heard ? ` — “${info.heard}”` : info.note ? ` — ${info.note}` : '';
+  const extra = info.note ? `: ${info.note}` : '';  // what was heard is in the subtitles
   setPill(next, (STATE_TEXT[next] ?? next) + extra);
 }
 

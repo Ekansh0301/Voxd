@@ -192,12 +192,12 @@ def main():
     layout.addWidget(caption)
     entry = QLineEdit()
     entry.setPlaceholderText("Type to TARS…  (Enter to send)")
-    entry.setFixedWidth(w)
+    entry.setFixedWidth(w - 50)
     entry.setStyleSheet(
         "QLineEdit { background: rgba(14, 18, 32, 215); color: #f2f4f8; border: 1px solid #3a4560;"
         " border-radius: 10px; padding: 6px 10px; font-size: 13px; }"
     )
-    layout.addWidget(entry)
+    layout.addWidget(entry, alignment=Qt.AlignmentFlag.AlignHCenter)
 
     def fit():
         """Resize to the caption, growing upward: the bottom edge stays put."""
@@ -244,7 +244,7 @@ def main():
             show_caption()
         elif msg.get("type") == "state":
             state = msg.get("state", "")
-            tray.setToolTip(f"TARS — {state}")
+            tray.setToolTip(f"TARS: {state}")
             if state == "idle" and caption.isVisible():
                 hide_timer.start()  # fade out a while after it finishes talking
 
