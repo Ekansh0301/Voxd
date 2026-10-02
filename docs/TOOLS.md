@@ -1,7 +1,7 @@
 # TARS tools
 
 Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
-65 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
+66 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
 
 | Tier | Meaning |
 |---|---|
@@ -91,9 +91,10 @@ Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
 
 | Tool | Tier | What it does | Parameters |
 |---|---|---|---|
+| `apply_patch` | T1 | Apply a unified diff that changes one or more files (e.g. a fix across a project). Checks it applies, shows the change, asks first, keeps backups. | `patch`, `folder`? |
 | `check_code` | T0 | Check Python code for errors: syntax, then ruff / pylint / mypy if available. | `path` |
 | `edit_file` | T1 | Change code in a file: replace one exact, unique snippet (copy it from read_file) with new text. Shows the change and asks first; keeps a backup. | `path`, `find`, `replace` |
-| `undo_edit` | T1 | Revert the last edit_file change. | none |
+| `undo_edit` | T1 | Revert the last edit_file or apply_patch change. | none |
 
 ## Spotube
 

@@ -6,8 +6,10 @@ for undo), and a syntax check that needs no tools at all.
 
 import ast
 import difflib
+import re
 import shlex
 import shutil
+import subprocess
 import time
 from pathlib import Path
 
@@ -18,7 +20,8 @@ from tars.tools.files import missing
 from tars.tools.shell import run_command
 
 BACKUPS = TARS_HOME / "backups"
-_undo: list[tuple[Path, Path]] = []  # (original file, backup copy), newest last
+# Each edit or patch: [(file, its backup, or None if the change created it)], newest last.
+_undo: list[list[tuple[Path, Path | None]]] = []
 
 
 def _project_bin(start: Path, tool: str) -> str | None:
@@ -102,7 +105,7 @@ async def edit_file(ctx: Context, path: str, find: str, replace: str) -> str:
     backup.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(p, backup)
     p.write_text(new)
-    _undo.append((p, backup))
+    _undo.append([(p, backup)])
     syntax = _syntax([p]) if p.suffix == ".py" else []
     return f"edited {p.name} (backup kept; undo_edit reverts)\n{diff}" + (
         f"\nwarning: {syntax[0]}" if syntax else ""
@@ -112,11 +115,77 @@ async def edit_file(ctx: Context, path: str, find: str, replace: str) -> str:
 async def undo_edit(ctx: Context) -> str:
     if not _undo:
         return "nothing to undo"
-    original, backup = _undo[-1]
-    await ctx.require(Tier.T2, f"undo the last edit to {original.name}")
-    shutil.copy2(backup, original)
+    group = _undo[-1]
+    names = ", ".join(f.name for f, _ in group)
+    await ctx.require(Tier.T2, f"undo the last change to {names}")
+    for original, backup in group:
+        if backup is not None:
+            shutil.copy2(backup, original)
+        elif original.exists():  # the change created this file: to the Trash, not deleted
+            if ctx.desktop and shutil.which("gio"):
+                subprocess.run(["gio", "trash", str(original)], check=True, timeout=30)
+            else:
+                (ctx.home / ".trash-tars").mkdir(exist_ok=True)
+                shutil.move(str(original), str(ctx.home / ".trash-tars" / original.name))
     _undo.pop()
-    return f"restored {original.name} to before the last edit"
+    return f"restored {names} to before the last change"
+
+
+def _patch_files(patch: str) -> list[str]:
+    """Paths a unified diff writes ('+++ b/src/app.py' -> 'src/app.py')."""
+    out = []
+    for m in re.finditer(r"^\+\+\+ (\S+)", patch, re.M):
+        path = m.group(1)
+        if path != "/dev/null":
+            out.append(path[2:] if path.startswith(("a/", "b/")) else path)
+    return list(dict.fromkeys(out))
+
+
+async def apply_patch(ctx: Context, patch: str, folder: str = "~") -> str:
+    base = resolve(folder, ctx.home)
+    check_read(base, ctx.home)
+    if not base.is_dir():
+        return f"error: {folder} is not a folder"
+    if not shutil.which("patch"):
+        return "error: GNU patch isn't installed"
+    files = _patch_files(patch)
+    if not files:
+        return "error: that doesn't look like a unified diff (no '+++' lines)"
+    targets = [(base / f).resolve() for f in files]
+    for t in targets:
+        check_write(t, ctx.home)
+    strip = "-p1" if re.search(r"^\+\+\+ b/", patch, re.M) else "-p0"
+    args = ["patch", strip, "--forward", "--batch", "-d", str(base)]
+    dry = subprocess.run(
+        [*args, "--dry-run"], input=patch, capture_output=True, text=True, timeout=30
+    )
+    if dry.returncode != 0:
+        return f"error: the patch doesn't apply cleanly:\n{(dry.stdout + dry.stderr).strip()[:800]}"
+    added = sum(1 for ln in patch.splitlines() if ln.startswith("+") and not ln.startswith("+++"))
+    removed = sum(1 for ln in patch.splitlines() if ln.startswith("-") and not ln.startswith("---"))
+    await ctx.require(
+        Tier.T2, f"change {len(files)} file(s) ({', '.join(files[:4])}): +{added} -{removed} lines"
+    )
+    stamp_dir = BACKUPS / time.strftime("%Y%m%d-%H%M%S")
+    group: list[tuple[Path, Path | None]] = []
+    for t in targets:
+        if t.exists():
+            backup = stamp_dir / t.relative_to(ctx.home)
+            backup.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(t, backup)
+            group.append((t, backup))
+        else:
+            group.append((t, None))
+    done = subprocess.run(args, input=patch, capture_output=True, text=True, timeout=30)
+    if done.returncode != 0:  # shouldn't happen after a clean dry run: put everything back
+        for t, saved in group:
+            if saved is not None:
+                shutil.copy2(saved, t)
+        return f"error: patch failed and was rolled back:\n{done.stdout[:500]}"
+    _undo.append(group)
+    broken = _syntax([t for t in targets if t.suffix == ".py" and t.exists()])
+    return (f"patched {len(files)} file(s): {', '.join(files)} (+{added} -{removed}; backups kept; undo_edit reverts)"
+            + (f"\nwarning: {'; '.join(broken)}" if broken else ""))  # fmt: skip
 
 
 def register(reg: Registry):
@@ -133,4 +202,10 @@ def register(reg: Registry):
         obj(["path", "find", "replace"], path=path, find={"type": "string"}, replace={"type": "string"}),
         tier=Tier.T1,
     )(edit_file)  # fmt: skip
-    reg.tool("undo_edit", "Revert the last edit_file change.", tier=Tier.T1)(undo_edit)
+    reg.tool("undo_edit", "Revert the last edit_file or apply_patch change.", tier=Tier.T1)(
+        undo_edit
+    )
+    reg.tool("apply_patch", "Apply a unified diff that changes one or more files (e.g. a fix across a "
+             "project). Checks it applies, shows the change, asks first, keeps backups.",
+             obj(["patch"], patch={"type": "string"}, folder={"type": "string", "description": "folder the paths are relative to"}),
+             tier=Tier.T1)(apply_patch)  # fmt: skip

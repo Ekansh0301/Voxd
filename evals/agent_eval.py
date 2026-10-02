@@ -157,6 +157,10 @@ TASKS = [
     Task("leetcode problem", "Open the two sum problem on LeetCode.",
          lambda r: any("leetcode.com/problems/two-sum" in a for a in r.actions)),
     Task("fill a form", "Fill in this registration form for me.", lambda r: used(r, "fill_form")),
+    Task("multi-file rename", "In the code folder, rename the function add to plus everywhere it's used.",
+         lambda r: "def plus" in (read(r, "code/calc.py") or "") and "plus(" in (read(r, "code/main.py") or "")
+         and "add(" not in (read(r, "code/main.py") or ""),
+         {"code/calc.py": "def add(a, b):\n    return a + b\n", "code/main.py": "from calc import add\n\nprint(add(2, 3))\n"}),
     # ── long tasks (8-15 steps; Phase 4 exit: >= 55%) ───────────────────────
     Task("long: project scaffold",
          "In Documents, make a folder called webapp with subfolders src and tests, create src/app.py that "

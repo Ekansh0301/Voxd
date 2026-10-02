@@ -63,3 +63,40 @@ def test_missing_path_suggests_where_it_is(proj):
     (proj / ".ssh/app.py").write_text("secret")
     out = run(code.check_code(Context(home=proj, desktop=False), "app.py"))
     assert "Did you mean ~/proj/app.py?" in out and ".ssh" not in out
+
+
+PATCH = """--- a/proj/app.py
++++ b/proj/app.py
+@@ -1,2 +1,2 @@
+ def add(a, b):
+-    return a - b
++    return a + b
+--- /dev/null
++++ b/proj/util.py
+@@ -0,0 +1 @@
++TWO = 2
+"""
+
+
+def test_apply_patch_across_files_and_undo(proj):
+    async def yes(_):
+        return True
+
+    ctx = Context(home=proj, approve=yes, desktop=False)
+    out = run(code.apply_patch(ctx, PATCH))
+    assert out.startswith("patched 2 file(s)") and "+2 -1" in out
+    assert "a + b" in (proj / "proj/app.py").read_text() and (proj / "proj/util.py").exists()
+    run(code.undo_edit(ctx))
+    assert "a - b" in (proj / "proj/app.py").read_text()
+    assert (
+        not (proj / "proj/util.py").exists() and (proj / ".trash-tars/util.py").exists()
+    )  # trashed, not deleted
+
+
+def test_apply_patch_checks_first(proj):
+    ctx = Context(home=proj, approve=None, desktop=False)
+    bad = PATCH.replace("-    return a - b", "-    return a * b")
+    assert "doesn't apply" in run(code.apply_patch(ctx, bad))
+    with pytest.raises(Denied):  # applies, but nobody approved it
+        run(code.apply_patch(ctx, PATCH))
+    assert "a - b" in (proj / "proj/app.py").read_text()
