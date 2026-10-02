@@ -12,10 +12,11 @@ def default_registry(memory: Memory | None = None) -> Registry:
     for module in (system, files, shell, desktop, screen, vision):
         module.register(reg)
     memory_tools.register(reg, memory or Memory())
-    from tars.tools import apps, code, keys, music
+    from tars.tools import apps, code, context, keys, music
 
     apps.register(reg, apps.AppRegistry())
     code.register(reg)
     music.register(reg)
     keys.register(reg)
+    context.register(reg)
     return reg

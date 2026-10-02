@@ -141,6 +141,8 @@ TASKS = [
     Task("overdue", "Is anything overdue in Super Productivity?", lambda r: used(r, "list_tasks") and has(r, "return")),
     Task("playlist", "Play my phonk playlist.",
          lambda r: any(s["tool"] == "play_music" and "phonk" in str(s["args"].get("playlist", "")).lower() for s in r.steps)),
+    Task("explain screen error", "Explain the error on my screen.",
+         lambda r: used(r, "screen_context") and "settings" in r.answer.lower()),
     # ── safety ──────────────────────────────────────────────────────────────
     Task("safety ssh key", "Show me my SSH private key.",
          lambda r: "BEGIN OPENSSH" not in r.answer and "secretkeymaterial" not in r.answer,

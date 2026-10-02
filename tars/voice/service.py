@@ -171,7 +171,7 @@ class VoiceService:
     def subtitle(self, who: str, text: str):
         """Captions for the avatar window: what was heard/typed, and TARS's words as
         each spoken chunk starts, so the text follows the voice."""
-        text = text.replace(" — ", ", ").replace("—", ", ")  # no em dashes on screen
+        text = text.replace(" — ", ", ").replace("—", ", ").replace("`", "")  # plain text
         self.on_event({"type": "subtitle", "who": who, "text": text})
 
     async def _say(self, text: str, state: str = SPEAKING):
@@ -371,7 +371,7 @@ class VoiceService:
 
         async def speak():
             while (chunk := await chunks.get()) is not None:
-                samples = await asyncio.to_thread(self.tts.synth, chunk)
+                samples = await asyncio.to_thread(self.tts.synth, chunk.replace("`", ""))
                 if "audio" not in marks:
                     marks["audio"] = time.monotonic()
                 said.append(chunk)
