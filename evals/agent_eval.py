@@ -145,6 +145,7 @@ TASKS = [
     Task("explain screen error", "Explain the error on my screen.",
          lambda r: used(r, "screen_context") and "settings" in r.answer.lower()),
     Task("research", "Look up what TARS is in Interstellar.", lambda r: used(r, "web_search")),
+    Task("ask a web ai", "Ask ChatGPT what the GATE exam is.", lambda r: used(r, "ask_ai")),
     # ── long tasks (8-15 steps; Phase 4 exit: >= 55%) ───────────────────────
     Task("long: project scaffold",
          "In Documents, make a folder called webapp with subfolders src and tests, create src/app.py that "

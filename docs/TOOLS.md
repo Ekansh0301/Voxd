@@ -1,7 +1,7 @@
 # TARS tools
 
 Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
-59 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
+60 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
 
 | Tier | Meaning |
 |---|---|
@@ -140,6 +140,12 @@ Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
 | `web_switch` | T1 | Switch to a Firefox tab by its index. | `tab` |
 | `web_tabs` | T0 | List the tabs open in Firefox. | none |
 | `web_type` | T1 | Type into the focused field on the page, optionally then a key like Enter. | `text`, `then_key`? |
+
+## ask_ai
+
+| Tool | Tier | What it does | Parameters |
+|---|---|---|---|
+| `ask_ai` | T1 | Ask a web AI (ChatGPT by default, else Gemini or Claude) a question in the user's Firefox and return its answer. For hard questions or when the user asks an AI site. Personal details are removed before sending. | `question`, `site`? |
 
 ## routines
 

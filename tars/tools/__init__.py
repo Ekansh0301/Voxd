@@ -13,7 +13,7 @@ def default_registry(memory: Memory | None = None, skills: Skills | None = None)
     for module in (system, files, shell, desktop, screen, vision):
         module.register(reg)
     memory_tools.register(reg, memory or Memory())
-    from tars.tools import apps, code, context, keys, locate, music, research, routines
+    from tars.tools import apps, ask_ai, code, context, keys, locate, music, research, routines
 
     apps.register(reg, apps.AppRegistry())
     code.register(reg)
@@ -23,4 +23,5 @@ def default_registry(memory: Memory | None = None, skills: Skills | None = None)
     research.register(reg)
     locate.register(reg)
     routines.register(reg, skills or Skills())
+    ask_ai.register(reg)
     return reg
