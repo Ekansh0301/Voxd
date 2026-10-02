@@ -14,7 +14,7 @@ flowchart LR
   pttd -- down/up --> voice
   mic --> voice
   subgraph tars["tars (python -m tars.voice)"]
-    voice["voice service<br/>Whisper STT (GPU) · Kokoro TTS (CPU)"] --> agent["agent loop<br/>59 tools · routines · policy · approvals"]
+    voice["voice service<br/>Whisper STT (GPU) · Kokoro TTS (CPU)"] --> agent["agent loop<br/>67 tools · routines · policy · approvals"]
   end
   agent -- chat + tools --> swap["llama-swap :8090<br/>Qwen3.5-4B on the GPU<br/>(vision projector on CPU)"]
   voice <-- "WebSocket :8765<br/>(token)" --> ui["avatar window (Qt, XWayland)<br/>Live2D · subtitles · text box<br/>top-bar icon · control border"]
@@ -28,7 +28,7 @@ flowchart LR
 |---|---|
 | `tars/voice/` | Push-to-talk, recording, Whisper `small.en` on the GPU, Kokoro `af_heart` TTS streamed sentence by sentence, the turn loop, approvals, the kill switch |
 | `tars/agent/` | The tool registry, permission tiers, the command policy, and the agent loop (native tool calling, up to 12 steps, loop detection, context budgeting) |
-| `tars/tools/` | The tools themselves; [TOOLS.md](TOOLS.md) lists all 59 |
+| `tars/tools/` | The tools themselves; [TOOLS.md](TOOLS.md) lists all 67 |
 | `tars/perception/` | AT-SPI (accessibility trees over D-Bus), the Screenshot and RemoteDesktop portals, the window and VS Code clients |
 | `tars/ui/` | The avatar window, its message bus, and the Live2D build |
 | `tars/llm/` | Streaming chat client, llama-swap start-up, prompt-cache priming |
@@ -47,7 +47,7 @@ and benchmarked but not used yet; it's reserved for Phase 4's helper agents.
 2. A routine you taught ("study mode") runs its requests in order. Settings
    commands ("humor 40%") and unambiguous ones ("pause the music") are handled
    directly, without the model.
-3. Otherwise the model gets the system prompt, the 59 tool descriptions, recent
+3. Otherwise the model gets the system prompt, the 67 tool descriptions, recent
    history and the new message, with the current time and any remembered facts.
 4. If a learned routine fits the request, its steps run first, as if the model had
    proposed them; the model then only writes the answer, or carries on if a step
@@ -93,6 +93,6 @@ After a click or typing, TARS re-reads the window and gets told what changed.
 | Path | Contents |
 |---|---|
 | `config/` | Defaults: `tars.yaml` (voice, models, personality), `sites.yaml` (per-site access), `apps.yaml` (your apps), `mcp.json` |
-| `~/.config/tars/` | Your overrides (`tars.yaml` is merged over the default), `llama-swap.yaml` |
-| `~/.local/share/tars/` | Models, binaries (`opt/`), the avatar build, `memory.db`, `skills.db` (routines), `logs/`, edit `backups/`, the keyboard approval token, `recordings/` (only with `--save-audio`) |
+| `~/.config/tars/` | Your overrides (`tars.yaml` is merged over the default), `profile.yaml` (yours, for forms), `llama-swap.yaml` |
+| `~/.local/share/tars/` | Models, binaries (`opt/`), the avatar build, `memory.db`, `skills.db` (routines), `docs.db` (your documents' index), `logs/`, edit `backups/`, the keyboard approval token, `recordings/` (only with `--save-audio`) |
 | `$XDG_RUNTIME_DIR/tars-vscode-*.sock` | The VS Code bridge, one per window |

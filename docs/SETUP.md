@@ -106,6 +106,21 @@ open. Remove: `code --uninstall-extension tars.tars-bridge`.
 - **Microphone:** at 100% input volume the built-in mic clips, which garbles speech
   recognition; TARS warns at startup if it does. `wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 45%`.
 
+## 10. Your profile (optional)
+
+For filling forms, and so TARS can keep your details out of anything it sends to a
+web AI, write `~/.config/tars/profile.yaml` yourself:
+
+```yaml
+name: Your Name
+email: you@example.com
+phone: "+91 98765 43210"
+roll_number: "2021xxxxx"
+college: Your College
+```
+
+Never put passwords there; TARS won't type them anyway.
+
 ## Check it works
 
 ```bash

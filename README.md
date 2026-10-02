@@ -11,7 +11,7 @@ trees, your browser's page, your terminal), works out the steps, operates your a
 and your logged-in Firefox, and answers out loud through a Live2D avatar. It asks
 before anything risky, and everything runs on the laptop.
 
-**Status:** Phases 0–3 of the [plan](docs/PLAN.md) are done, and Phase 4's learned routines ([STATUS.md](docs/STATUS.md)).
+**Status:** Phases 0–4 of the [plan](docs/PLAN.md) are done, and Phase 5 apart from Outlook ([STATUS.md](docs/STATUS.md)).
 On real apps it completes 11 of 12 live test tasks; first speech comes ~1.6 s after
 you let go of the key.
 
@@ -25,8 +25,10 @@ you let go of the key.
   keyboard and mouse, windows, volume, media, timers, memory.
 - **Your apps:** VS Code, Okular, Ghostty, Termius ("connect to ada"), Super Productivity
   (reminders, tasks, sync), Spotube (any song, your playlists).
-- **The web:** your Firefox (open, read, fill, click, with per-site rules), ChatGPT and
-  other AI sites (ask, read the answer), research in a hidden browser.
+- **The web:** your Firefox (open, read, fill, click, with per-site rules), shortcuts
+  for your sites (YouTube, GitHub, LeetCode, QuickRef), ChatGPT and other AI sites with
+  your personal details removed, cited research in a hidden browser, form filling.
+- **Your documents:** search your notes and PDFs.
 - **Coding:** "explain the error on my screen", check code with linters, fix with a
   shown diff and approval, undo.
 - **Learn routines:** a multi-step task that worked is replayed next time (about 3×
@@ -34,8 +36,8 @@ you let go of the key.
 - **Stay in control:** tap Right Ctrl to stop at once; an orange border shows whenever
   TARS is clicking or typing, and the window lists each step as it happens.
 
-Coming next: Outlook drafting (read → draft → you approve → send), forms, and
-proactive monitoring. See the [roadmap](docs/PLAN.md#16-roadmap).
+Coming next: Outlook drafting (read → draft → you approve → send) and proactive
+monitoring. See the [roadmap](docs/PLAN.md#16-roadmap).
 
 ## Quick start
 
@@ -60,7 +62,7 @@ A few one-time permissions (screenshots, keyboard and mouse, VS Code) are in
 | [USAGE.md](docs/USAGE.md) | Talking, typing, stopping, and what to ask |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it works: processes, a turn, seeing and acting |
 | [SAFETY.md](docs/SAFETY.md) | What it refuses, what asks first, how to revoke access |
-| [TOOLS.md](docs/TOOLS.md) | All 59 tools the model can use (generated) |
+| [TOOLS.md](docs/TOOLS.md) | All 67 tools the model can use (generated) |
 | [TESTING.md](docs/TESTING.md) | Unit tests, the three evals, benchmarks |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Problems met and their fixes |
 | [STATUS.md](docs/STATUS.md) | Progress against the plan |

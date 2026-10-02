@@ -9,7 +9,7 @@ Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-1
 | 2. Agent core and MCP | ✅ done | tools, policy, approvals, memory |
 | 3. Screen reading and control | ✅ done | live eval 11/12 (target ≥ 65%) |
 | 4. Multi-agent, recursion, skills | ✅ routines done; helper agents proposed to skip | long tasks 6/6, routine replays 4/4 |
-| 5. Capabilities (mail, forms, cloud) | next: Outlook drafting | research is done early |
+| 5. Capabilities (mail, forms, cloud) | ✅ mostly done; Outlook later | web AIs, research, documents, site shortcuts, forms, patches |
 | 6. Proactive monitoring | not started | |
 | 7. Hardening and learning | ongoing | |
 
@@ -74,6 +74,25 @@ Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-1
   agent already passes the long-task target. Teach-by-demonstration (recording your
   clicks) is also deferred: taught-by-voice routines cover most of it, and recording
   only works in apps that expose accessibility events.
+
+## Phase 5: capabilities (Outlook later, by choice)
+
+- **Web AIs instead of an API:** `ask_ai` types the question into ChatGPT (then Gemini,
+  Claude, AI Studio) in your Firefox and returns the answer. Personal details are
+  swapped for placeholders before sending and swapped back after (`tars/privacy.py`).
+- **Research:** `deep_research` reads the top results (plain HTTP first, the hidden
+  browser for script-built pages, in parallel) and returns cited passages; ~12 s.
+  `search_documents` searches your notes and PDFs (SQLite full-text index).
+- **Site shortcuts** in `config/sites.yaml`: YouTube search/play, GitHub, LeetCode,
+  QuickRef, LinkedIn; "play X on YouTube" is on the fast path.
+- **Forms:** `fill_form` from `profile.yaml`, review, never submits or fills secrets.
+- **Coding:** `apply_patch` (multi-file, dry run, approval, grouped undo) and
+  `search_code` for renames across files.
+- **Results:** agent eval 51 tasks, 96–100% across runs, every Phase 5 area covered
+  (target ≥ 65% per area).
+- **Not done:** Outlook (later); a cloud model API (needs your choice of provider; web
+  AIs cover it for now); AI Humanize (signed out, the site only inserted typos, so
+  automating it would hurt your text); a pattern-based injection detector.
 
 ## Waiting on you
 

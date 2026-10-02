@@ -7,9 +7,13 @@ not left to the model. A small model can be talked into things; the policy can't
 
 - Everything runs on the laptop: speech recognition, the model, speech, memory.
 - The microphone records only while you hold Right Ctrl.
-- TARS goes online only when you ask for something online (a website, ChatGPT,
-  research via DuckDuckGo). Cloud models aren't used; when they're added they'll
-  be opt-in, with personal details removed first ([PLAN.md](PLAN.md) §12.5).
+- TARS goes online only when you ask for something online (a website, research via
+  DuckDuckGo, a question to ChatGPT). Cloud model APIs aren't used.
+- **Before asking a web AI**, your profile details, emails, phone numbers and long ID
+  numbers are replaced with placeholders like `[EMAIL1]`, and put back in the answer
+  you hear; the site never sees them.
+- **Forms** are filled only from your profile, never with passwords, card, OTP, PIN,
+  Aadhaar/PAN or bank details, and never submitted without your yes.
 
 ## Permission tiers
 

@@ -35,12 +35,15 @@ Drag the avatar with the left mouse button.
 | Chat | "Tell me a joke", "What can you do?", "Humor 40 percent" |
 | Files | "What's in my Downloads?", "Find PDFs in Downloads", "Move the PNGs on my Desktop into Pictures/screens", "Delete old.log" (goes to the Trash) |
 | Your screen | "Explain the error on my screen" (terminal, VS Code, Firefox, other apps), "What's on my screen?" |
-| Coding | "Check app.py for errors", "Fix the bug in calc.py" (shows the change, asks first), "Undo that", "Open my project folder in VS Code" |
+| Coding | "Check app.py for errors", "Fix the bug in calc.py" (shows the change, asks first), "Rename add to plus everywhere in my project", "Undo that", "Open my project folder in VS Code" |
 | Apps | "Open lecture5.pdf" (Okular), "Open a terminal in Downloads", "Connect to ada in Termius", "Open Software Updater" |
 | Super Productivity | "Remind me to submit the assignment tomorrow at 9", "What's my next task?", "Anything overdue?", "Sync my Super Productivity" |
 | Music | "Play Believer", "Play my phonk playlist", "Play my liked songs", "Pause the music", "Next song" |
-| Web | "Open YouTube", "Ask ChatGPT what the GATE exam is", "What tabs do I have open?" |
-| Research | "Look up the latest stable Python version" (a hidden browser; your Firefox isn't touched) |
+| Web | "Open YouTube", "Play lofi on YouTube", "Open my GitHub notifications", "Open the two sum problem on LeetCode", "QuickRef for git", "What tabs do I have open?" |
+| Web AIs | "Ask ChatGPT what the GATE exam is" (personal details are removed before sending; Gemini or Claude if ChatGPT fails) |
+| Forms | "Fill in this form" (from your profile; never submits, never passwords; tells you what it filled and what's left) |
+| Research | "Look up the latest stable Python version", "Research the differences between TCP and UDP and cite sources" (a hidden browser; your Firefox isn't touched) |
+| Your documents | "Search my documents for paging" (your notes and PDFs; "index my Downloads too" adds a folder) |
 | System | "Set the volume to 30", "How much disk space do I have?", "What's using the most CPU?", "Set a timer for 10 minutes" |
 | Memory | "Remember that my favourite editor is VS Code", "What's my favourite editor?" |
 | Routines | "Make a routine called study mode that…", "study mode", "What routines do you have?" |
