@@ -1,7 +1,7 @@
 # TARS tools
 
 Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
-56 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
+59 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
 
 | Tier | Meaning |
 |---|---|
@@ -140,5 +140,13 @@ Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
 | `web_switch` | T1 | Switch to a Firefox tab by its index. | `tab` |
 | `web_tabs` | T0 | List the tabs open in Firefox. | none |
 | `web_type` | T1 | Type into the focused field on the page, optionally then a key like Enter. | `text`, `then_key`? |
+
+## routines
+
+| Tool | Tier | What it does | Parameters |
+|---|---|---|---|
+| `create_routine` | T1 | Save a named routine the user describes: a list of requests run in order when they say its name (e.g. 'study mode': open my project in VS Code; play my phonk playlist). | `name`, `steps` |
+| `forget_routine` | T1 | Delete a named routine, or a learned one by its #number. | `name` |
+| `list_routines` | T0 | The user's named routines and the ones TARS learned from finished tasks. | none |
 
 `?` = optional parameter.

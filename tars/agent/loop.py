@@ -89,6 +89,7 @@ async def run_turn(
     on_text: Callable[[str], None] = lambda _t: None,
     on_tool: Callable[[str, dict], None] = lambda _n, _a: None,
     tool_names: list[str] | None = None,
+    plan: list[dict] | None = None,
     **llm_kw,
 ) -> TurnResult:
     """`messages` (system + history + user) is extended in place with this turn."""
@@ -98,25 +99,38 @@ async def run_turn(
     request = next(
         (str(m.get("content", "")) for m in reversed(messages) if m.get("role") == "user"), ""
     )
+    # A learned routine's steps go first, as if the model had proposed them: same policy,
+    # approvals and logging, but no model output per step. The model then writes the
+    # answer, or takes over if a step failed.
+    pending = [
+        {"id": f"routine{i}", "name": p["tool"], "arguments": p["args"]}
+        for i, p in enumerate(plan or [])
+    ]
     for _ in range(MAX_STEPS):
         text: list[str] = []
         calls: list[dict] = []
+        replaying = bool(pending)
         _fit(messages)
-        try:
-            async for kind, value in stream_turn(endpoint, model, messages, tools=tools, **llm_kw):
-                if kind == "text":
-                    text.append(value)  # type: ignore[arg-type]
-                    on_text(value)  # type: ignore[arg-type]
-                else:
-                    calls = value  # type: ignore[assignment]
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code != 400:
-                raise
-            log.warning("the model rejected the request (likely too long for its context)")
-            done = ", ".join(s["tool"] for s in steps) or "nothing yet"
-            answer = f"This task got too long for me to finish in one go. So far I did: {done}."
-            messages.append({"role": "assistant", "content": answer})
-            return TurnResult(answer, steps, stopped="context")
+        if replaying:
+            calls, pending = pending, []
+        else:
+            try:
+                async for kind, value in stream_turn(
+                    endpoint, model, messages, tools=tools, **llm_kw
+                ):
+                    if kind == "text":
+                        text.append(value)  # type: ignore[arg-type]
+                        on_text(value)  # type: ignore[arg-type]
+                    else:
+                        calls = value  # type: ignore[assignment]
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code != 400:
+                    raise
+                log.warning("the model rejected the request (likely too long for its context)")
+                done = ", ".join(s["tool"] for s in steps) or "nothing yet"
+                answer = f"This task got too long for me to finish in one go. So far I did: {done}."
+                messages.append({"role": "assistant", "content": answer})
+                return TurnResult(answer, steps, stopped="context")
         said = "".join(text).strip()
         if not calls:
             messages.append({"role": "assistant", "content": said})
@@ -131,7 +145,12 @@ async def run_turn(
                 for c in calls
             ],
         })  # fmt: skip
+        failed = False
         for c in calls:
+            if failed:  # a replayed step failed: skip the rest, the model takes over
+                messages.append({"role": "tool", "tool_call_id": c["id"],
+                                 "content": "[skipped: an earlier step failed]"})  # fmt: skip
+                continue
             key = f"{c['name']}:{json.dumps(c['arguments'], sort_keys=True)}"
             seen[key] = seen.get(key, 0) + 1
             if seen[key] > 2:  # the same call a third time: it's looping
@@ -153,7 +172,10 @@ async def run_turn(
                 finally:
                     ctx.approve = original
             log.info(f"tool {c['name']}({c['arguments']}) -> {result[:120]!r}")
-            steps.append({"tool": c["name"], "args": c["arguments"], "result": result})
+            steps.append(
+                {"tool": c["name"], "args": c["arguments"], "result": result, "replayed": replaying}
+            )
+            failed = replaying and result.startswith(("error", "refused"))
             messages.append(
                 {"role": "tool", "tool_call_id": c["id"], "content": _wrap(c["name"], result)}
             )

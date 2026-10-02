@@ -16,11 +16,12 @@ from pathlib import Path
 import numpy as np
 
 from tars import router
-from tars.agent.loop import run_turn
 from tars.agent.tools import Context, Registry
 from tars.memory.store import Memory
 from tars.persona import stamp, system_prompt
 from tars.sites import SiteRegistry
+from tars.skills import Skills
+from tars.skills.runner import turn_with_skills
 from tars.tools import default_registry
 from tars.voice import commands
 from tars.voice.audio import Recorder
@@ -78,7 +79,8 @@ class VoiceService:
         self.player = Player(self.tts.sample_rate)
         self.recorder = Recorder()
         self.memory = memory or Memory()
-        self.registry = registry or default_registry(self.memory)
+        self.skills = Skills()  # learned and taught routines
+        self.registry = registry or default_registry(self.memory, self.skills)
         self.sites = SiteRegistry()
         self.site_names = [
             s.key.capitalize() for s in self.sites.sites.values() if s.access != "blocked"
@@ -348,6 +350,17 @@ class VoiceService:
         self.subtitle("you", text)
         print(f"\nyou : {text}{'  (typed)' if typed else ''}", flush=True)
 
+        if found := self.skills.routine_for(text):
+            name, steps = found  # a routine the user taught: run its requests in order
+            print(f"      [routine {name!r}: {len(steps)} steps]", flush=True)
+            await self._say(f"Starting {name}.")
+            for step in steps:
+                if self.skills.routine_for(step):
+                    continue  # a routine inside itself would loop
+                await self._respond(step, time.monotonic(), time.monotonic(), typed=True)
+            self._set(IDLE)
+            return
+
         if cmd := commands.parse(text):  # personality settings: no LLM round-trip
             confirmation = commands.apply(self.cfg, *cmd)
             await self._say(confirmation)
@@ -401,12 +414,17 @@ class VoiceService:
 
         speaker = asyncio.create_task(speak())
         try:
-            result = await run_turn(
-                messages, self.registry, self.ctx,
+            result, routine, _learned = await turn_with_skills(
+                self.skills, text, messages, self.registry, self.ctx,
                 self.cfg["llm"]["endpoint"], self.cfg["llm"]["brain"],
                 on_text=on_text, on_tool=on_tool,
                 max_tokens=400, temperature=0.3, top_p=0.8,
             )  # fmt: skip
+            if routine:
+                print(
+                    f"      [routine #{routine.id}: {len(routine.steps)} steps replayed]",
+                    flush=True,
+                )
             for c in chunker.flush():
                 chunks.put_nowait(c)
             chunks.put_nowait(None)
