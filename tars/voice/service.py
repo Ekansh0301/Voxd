@@ -30,6 +30,13 @@ from tars.voice.tts import Speaker
 
 log = logging.getLogger("tars.voice")
 
+# Tools that move the mouse, type, or drive an app: while one has run in a turn, the
+# screen shows the control border, and a tap of Right Ctrl stops everything.
+CONTROL_TOOLS = {"type_text", "press_keys", "focus_window", "click", "click_sequence", "type_into",
+                 "web_click", "web_fill", "web_type", "web_key", "play_music", "sync_tasks",
+                 "termius_connect"}  # fmt: skip
+TAP_SECONDS = 0.45  # shorter than this, a press is a stop, not speech
+
 
 def _brief(args: dict) -> str:
     """Tool args for the history note, long values cut ('text': 'Dear …')."""
@@ -82,6 +89,8 @@ class VoiceService:
         self.history: list[dict] = []
         self._warned_clipping = False
         self.on_event: Callable[[dict], None] = lambda _e: None  # subtitles etc. to the window
+        self._controlling = False  # border shown
+        self._press_stopped = False  # this push-to-talk press interrupted a turn
         self.save_audio = save_audio  # opt-in: keep your utterances for STT evaluation
         if save_audio:
             save_audio.mkdir(parents=True, exist_ok=True)
@@ -113,6 +122,9 @@ class VoiceService:
                 if awaiting_answer:
                     self.player.interrupt()  # stop the question, keep the turn waiting
                 else:
+                    self._press_stopped = self._controlling or bool(
+                        self._turn and not self._turn.done()
+                    )
                     await self._interrupt()
                 self.recorder.start()
                 self._set(LISTENING)
@@ -123,15 +135,37 @@ class VoiceService:
                 audio = self.recorder.stop()
                 if awaiting_answer:
                     asyncio.create_task(self._answer_approval(audio))
+                elif self._press_stopped and len(audio) < TAP_SECONDS * 16000:
+                    await self._stopped()  # the kill switch: a tap while TARS was busy
                 else:
                     self._turn = asyncio.create_task(self._guarded_turn(audio, time.monotonic()))
 
     async def _interrupt(self):
-        if self._turn and not self._turn.done():
+        if self._turn and not self._turn.done() and self._turn is not asyncio.current_task():
             self._turn.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._turn
         self.player.interrupt()
+
+    def _control(self, on: bool):
+        if on != self._controlling:
+            self._controlling = on
+            self.on_event({"type": "control", "on": on})
+
+    async def stop(self):
+        """Kill switch from the TARS menu or typed "stop": end whatever TARS is doing."""
+        was_busy = self._controlling or bool(self._turn and not self._turn.done())
+        await self._interrupt()
+        if was_busy:
+            await self._stopped()
+        else:
+            self._set(IDLE)
+
+    async def _stopped(self):
+        print("      [stopped]", flush=True)
+        self._control(False)
+        self.subtitle("tars", "Stopped.")
+        self._set(IDLE, note="stopped")
 
     # ── speaking outside a streamed answer ──────────────────────────────────
     def subtitle(self, who: str, text: str):
@@ -201,13 +235,22 @@ class VoiceService:
         text = text.strip()
         if not text:
             return
+        if text.lower().strip(".! ") in ("stop", "cancel", "stop it"):
+            asyncio.get_running_loop().create_task(self.stop())
+            return
         if self._approval is not None and not self._approval.done():
             print(f"you : {text}  (typed)", flush=True)
             self._approval.set_result(text)
             return
 
+        previous = self._turn
+
         async def turn():
-            await self._interrupt()
+            if previous and not previous.done():  # a new message replaces the old turn
+                previous.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await previous
+            self.player.interrupt()
             now = time.monotonic()
             await self._guarded(self._respond(text, now, now, typed=True))
 
@@ -224,6 +267,8 @@ class VoiceService:
         except Exception as e:  # e.g. LLM server down: say so on the avatar, keep running
             log.exception("turn failed")
             self._set("error", note=str(e)[:120])
+        finally:
+            self._control(False)  # the border goes away however the turn ends
 
     async def _fast_path(self, text: str, route: "router.Route", stt_s: float) -> bool:
         """Run an unambiguous command without the LLM. False = let the agent handle it."""
@@ -341,6 +386,8 @@ class VoiceService:
 
         def on_tool(name: str, args: dict):
             marks.setdefault("token", time.monotonic())
+            if name in CONTROL_TOOLS:
+                self._control(True)
             print(f"      · {name}({args})", flush=True)
             if "narrated" not in marks and (line := self._narration(name, args)):
                 marks["narrated"] = time.monotonic()

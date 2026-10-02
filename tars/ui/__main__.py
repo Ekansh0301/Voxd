@@ -28,7 +28,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "xcb")  # XWayland: always-on-top + pos
 import json
 
 from PyQt6.QtCore import QBuffer, QByteArray, QEvent, QObject, QPoint, Qt, QTimer, QUrl
-from PyQt6.QtGui import QAction, QColor, QIcon
+from PyQt6.QtGui import QAction, QColor, QFont, QIcon, QPainter, QPen
 from PyQt6.QtWebEngineCore import (
     QWebEnginePage,
     QWebEngineProfile,
@@ -103,6 +103,45 @@ class Page(QWebEnginePage):
         print(
             f"js [{Path(QUrl(source).path()).name}:{line}] {message}", file=sys.stderr, flush=True
         )
+
+
+class ControlBorder(QWidget):
+    """Shown while TARS drives the mouse/keyboard: a frame around the screen and a note
+    on how to stop it. Ignores the mouse and never takes focus."""
+
+    COLOR = QColor(255, 159, 67)
+    TEXT = "TARS is in control  ·  tap Right Ctrl to stop"
+
+    def __init__(self, screen):
+        super().__init__()
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
+            | Qt.WindowType.WindowTransparentForInput
+            | Qt.WindowType.X11BypassWindowManagerHint  # above everything, never focused
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.setGeometry(screen.geometry())
+
+    def paintEvent(self, _ev):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(QPen(self.COLOR, 6))
+        p.drawRect(self.rect().adjusted(3, 3, -3, -3))
+        font = QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        p.setFont(font)
+        tw = p.fontMetrics().horizontalAdvance(self.TEXT) + 28
+        box = self.rect().adjusted((self.width() - tw) // 2, 6, -(self.width() - tw) // 2, 0)
+        box.setHeight(26)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(self.COLOR)
+        p.drawRoundedRect(box, 13, 13)
+        p.setPen(QColor(20, 20, 30))
+        p.drawText(box, Qt.AlignmentFlag.AlignCenter, self.TEXT)
 
 
 class DragFilter(QObject):
@@ -210,6 +249,8 @@ def main():
         geo = app.primaryScreen().availableGeometry()
         win.move(QPoint(geo.right() - win.width() - 24, geo.bottom() - win.height() - 24))
 
+    border = ControlBorder(app.primaryScreen())
+
     # Talking to TARS over the same token-protected bus the page uses.
     sock = QWebSocket()
     lines = {"you": "", "tars": ""}
@@ -242,6 +283,8 @@ def main():
             elif who == "tars":
                 lines["tars"] = msg.get("text", "")
             show_caption()
+        elif msg.get("type") == "control":
+            border.setVisible(bool(msg.get("on")))
         elif msg.get("type") == "state":
             state = msg.get("state", "")
             tray.setToolTip(f"TARS: {state}")
@@ -283,6 +326,9 @@ def main():
             QAction("Type a message", menu, triggered=type_message),
             QAction("Show / hide avatar", menu, triggered=toggle_avatar),
         ]
+    )
+    menu.addAction(
+        QAction("Stop what TARS is doing", menu, triggered=lambda: send({"type": "stop"}))
     )
     menu.addSeparator()
     menu.addAction(QAction("Quit TARS", menu, triggered=quit_tars))

@@ -84,6 +84,8 @@ async def main():
         def from_window(msg: dict):
             if msg.get("type") == "text":
                 service.submit_text(str(msg.get("text", "")))
+            elif msg.get("type") == "stop":  # tray menu "Stop" (the kill switch)
+                asyncio.get_running_loop().create_task(service.stop())
             elif msg.get("type") == "quit":  # tray menu "Quit TARS"
                 logging.getLogger("tars.voice").info("quit from the TARS menu")
                 runner.cancel()

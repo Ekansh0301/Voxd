@@ -8,6 +8,7 @@ the sandbox sets no_new_privs, so sudo and setuid binaries cannot elevate.
 """
 
 import asyncio
+import contextlib
 import shlex
 import shutil
 from pathlib import Path
@@ -77,6 +78,10 @@ async def run_command(ctx: Context, command: str, timeout: int = 30) -> str:
     )  # fmt: skip
     try:
         out, _ = await asyncio.wait_for(proc.communicate(), timeout=min(timeout, 300))
+    except asyncio.CancelledError:  # stopped by the user: don't leave it running
+        with contextlib.suppress(ProcessLookupError):
+            proc.kill()
+        raise
     except TimeoutError:
         proc.kill()
         return f"error: timed out after {timeout}s"

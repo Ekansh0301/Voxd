@@ -12,6 +12,7 @@ capitals and symbols itself.
 """
 
 import asyncio
+import contextlib
 import os
 import secrets
 
@@ -78,6 +79,8 @@ class Keyboard:
         self.router: DBusRouter | None = None
         self.session: str = ""
         self.devices = 0
+        self._held_keys: set[int] = set()  # released on exit, even when a stop cancels mid-press
+        self._held_buttons: set[int] = set()
 
     async def __aenter__(self) -> "Keyboard":
         _ensure_desktop_file()
@@ -96,6 +99,7 @@ class Keyboard:
         return self
 
     async def __aexit__(self, *exc):
+        await self.release_all()
         if self.router and self.session:
             session = DBusAddress(self.session, "org.freedesktop.portal.Desktop",
                                   "org.freedesktop.portal.Session")  # fmt: skip
@@ -157,7 +161,29 @@ class Keyboard:
             with os.fdopen(fd, "w") as f:
                 f.write(res["restore_token"][1])
 
+    async def release_all(self) -> None:
+        """Let go of anything still held (a stop can land between press and release)."""
+        if not (self.router and self.session):
+            return
+        for sym in list(self._held_keys):
+            with contextlib.suppress(Exception):
+                await self.router.send_and_get_reply(
+                    new_method_call(
+                        RD, "NotifyKeyboardKeysym", "oa{sv}iu", (self.session, {}, sym, 0)
+                    )
+                )
+        for btn in list(self._held_buttons):
+            with contextlib.suppress(Exception):
+                await self.router.send_and_get_reply(
+                    new_method_call(
+                        RD, "NotifyPointerButton", "oa{sv}iu", (self.session, {}, btn, 0)
+                    )
+                )
+        self._held_keys.clear()
+        self._held_buttons.clear()
+
     async def _key(self, sym: int, pressed: bool) -> None:
+        (self._held_keys.add if pressed else self._held_keys.discard)(sym)
         assert self.router is not None
         await self.router.send_and_get_reply(
             new_method_call(RD, "NotifyKeyboardKeysym", "oa{sv}iu",
@@ -195,9 +221,11 @@ class Keyboard:
     async def click(self, x: float, y: float, button: str = "left", double: bool = False) -> None:
         await self.move_to(x, y)
         for _ in range(2 if double else 1):
+            self._held_buttons.add(BUTTONS[button])
             await self._pointer("NotifyPointerButton", "iu", (BUTTONS[button], 1))
             await asyncio.sleep(0.04)
             await self._pointer("NotifyPointerButton", "iu", (BUTTONS[button], 0))
+            self._held_buttons.discard(BUTTONS[button])
             await asyncio.sleep(0.06)
 
     async def scroll(self, steps: int) -> None:
