@@ -88,6 +88,7 @@ async def run_turn(
     model: str,
     on_text: Callable[[str], None] = lambda _t: None,
     on_tool: Callable[[str, dict], None] = lambda _n, _a: None,
+    on_result: Callable[[dict], None] = lambda _s: None,
     tool_names: list[str] | None = None,
     plan: list[dict] | None = None,
     **llm_kw,
@@ -175,6 +176,7 @@ async def run_turn(
             steps.append(
                 {"tool": c["name"], "args": c["arguments"], "result": result, "replayed": replaying}
             )
+            on_result(steps[-1])
             failed = replaying and result.startswith(("error", "refused"))
             messages.append(
                 {"role": "tool", "tool_call_id": c["id"], "content": _wrap(c["name"], result)}

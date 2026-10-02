@@ -39,6 +39,12 @@ CONTROL_TOOLS = {"type_text", "press_keys", "focus_window", "click", "click_sequ
 TAP_SECONDS = 0.45  # shorter than this, a press is a stop, not speech
 
 
+def _step_label(name: str, args: dict) -> str:
+    """'web_search', {'query': 'population of delhi'} -> 'web search: population of delhi'."""
+    arg = next((str(v) for v in args.values() if isinstance(v, str) and v.strip()), "")
+    return name.replace("_", " ") + (f": {arg[:48]}" if arg else "")
+
+
 def _brief(args: dict) -> str:
     """Tool args for the history note, long values cut ('text': 'Dear …')."""
     return ", ".join(f"{k}={str(v)[:120 if k in ('path', 'source', 'destination', 'url') else 40]!r}"
@@ -277,6 +283,7 @@ class VoiceService:
             self._set("error", note=str(e)[:120])
         finally:
             self._control(False)  # the border goes away however the turn ends
+            self.on_event({"type": "steps_end"})
 
     async def _fast_path(self, text: str, route: "router.Route", stt_s: float) -> bool:
         """Run an unambiguous command without the LLM. False = let the agent handle it."""
@@ -405,19 +412,26 @@ class VoiceService:
 
         def on_tool(name: str, args: dict):
             marks.setdefault("token", time.monotonic())
+            self.on_event({"type": "step", "label": _step_label(name, args), "status": "running"})
             if name in CONTROL_TOOLS:
                 self._control(True)
+
             print(f"      · {name}({args})", flush=True)
             if "narrated" not in marks and (line := self._narration(name, args)):
                 marks["narrated"] = time.monotonic()
                 chunks.put_nowait(line)
+
+        def on_result(step: dict):
+            bad = str(step["result"]).startswith(("error", "refused"))
+            self.on_event({"type": "step", "label": _step_label(step["tool"], step["args"]),
+                           "status": "failed" if bad else "done", "replayed": step.get("replayed", False)})  # fmt: skip
 
         speaker = asyncio.create_task(speak())
         try:
             result, routine, _learned = await turn_with_skills(
                 self.skills, text, messages, self.registry, self.ctx,
                 self.cfg["llm"]["endpoint"], self.cfg["llm"]["brain"],
-                on_text=on_text, on_tool=on_tool,
+                on_text=on_text, on_tool=on_tool, on_result=on_result,
                 max_tokens=400, temperature=0.3, top_p=0.8,
             )  # fmt: skip
             if routine:

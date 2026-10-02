@@ -219,6 +219,15 @@ def main():
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(6)
     layout.addWidget(view)
+    tasks = QLabel()  # the steps of the current task, live
+    tasks.setTextFormat(Qt.TextFormat.RichText)
+    tasks.setFixedWidth(w)
+    tasks.setStyleSheet(
+        "QLabel { background: rgba(14, 18, 32, 200); color: #c9d1e3; border-radius: 10px;"
+        " padding: 6px 10px; font-size: 12px; }"
+    )
+    tasks.hide()
+    layout.addWidget(tasks)
     caption = QLabel()
     caption.setWordWrap(True)
     caption.setTextFormat(Qt.TextFormat.RichText)
@@ -271,10 +280,45 @@ def main():
         hide_timer.stop()
         fit()
 
+    steps: list[tuple[str, str, bool]] = []  # (label, status, replayed)
+    ICON = {"running": "⏳", "done": "✓", "failed": "✗"}
+
+    def show_steps():
+        def esc(t: str) -> str:
+            return t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+        rows = [
+            f"<span style='color:{'#ff8a8a' if st == 'failed' else '#9fe0a8' if st == 'done' else '#f2f4f8'}'>"
+            f"{ICON[st]}</span> {'↻ ' if rep else ''}{esc(label)}"
+            for label, st, rep in steps[-6:]
+        ]
+        tasks.setText("<br>".join(rows))
+        tasks.setVisible(bool(rows))
+        fit()
+
+    def on_step(msg: dict):
+        label, status = msg.get("label", ""), msg.get("status", "running")
+        if status != "running" and steps and steps[-1][0] == label and steps[-1][1] == "running":
+            steps[-1] = (label, status, bool(msg.get("replayed")))
+        else:
+            steps.append((label, status, bool(msg.get("replayed"))))
+        show_steps()
+
+    def clear_steps():
+        steps.clear()
+        tasks.hide()
+        fit()
+
     def on_message(raw: str):
         try:
             msg = json.loads(raw)
         except json.JSONDecodeError:
+            return
+        if msg.get("type") == "step":
+            on_step(msg)
+            return
+        if msg.get("type") == "steps_end":
+            QTimer.singleShot(4000, clear_steps)  # a moment to see how it went
             return
         if msg.get("type") == "subtitle":
             who = msg.get("who")
