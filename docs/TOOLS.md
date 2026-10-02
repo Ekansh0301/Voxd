@@ -1,7 +1,7 @@
 # TARS tools
 
 Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
-60 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
+63 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
 
 | Tier | Meaning |
 |---|---|
@@ -119,6 +119,7 @@ Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
 
 | Tool | Tier | What it does | Parameters |
 |---|---|---|---|
+| `deep_research` | T0 | Research a question properly: search, read the top few pages, and return the relevant passages with numbered sources to cite. For questions needing several sources. | `question`, `sources`? |
 | `read_page` | T0 | Read a web page's text in the hidden browser (e.g. a web_search result). | `url` |
 | `web_search` | T0 | Search the web (DuckDuckGo) in a hidden browser; returns titles, links and snippets. For research and questions needing current information. Doesn't touch the user's Firefox. | `query` |
 
@@ -146,6 +147,13 @@ Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
 | Tool | Tier | What it does | Parameters |
 |---|---|---|---|
 | `ask_ai` | T1 | Ask a web AI (ChatGPT by default, else Gemini or Claude) a question in the user's Firefox and return its answer. For hard questions or when the user asks an AI site. Personal details are removed before sending. | `question`, `site`? |
+
+## documents
+
+| Tool | Tier | What it does | Parameters |
+|---|---|---|---|
+| `index_documents` | T0 | Index a folder's documents (text, notes, PDFs) so search_documents can find them. | `folder`? |
+| `search_documents` | T0 | Search the user's own documents and PDFs for a topic; returns passages with the file they're from. | `query` |
 
 ## routines
 

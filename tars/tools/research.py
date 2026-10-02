@@ -10,8 +10,12 @@ temporary profile goes under ~/snap/firefox/common instead.
 import asyncio
 import json
 import re
+from html import unescape
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import parse_qs, quote_plus, urlparse
+
+import httpx
 
 from tars.agent.tools import Context, Denied, Registry, obj
 from tars.mcp.client import MCPServer
@@ -90,14 +94,41 @@ async def _goto(url: str) -> None:
         raise ConnectionError(out[:200])
 
 
+RESULT_RE = re.compile(
+    r'class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>.*?class="result__snippet"[^>]*>(.*?)</a>',
+    re.S,
+)
+
+
+async def _search_http(url: str) -> list[dict]:
+    try:
+        transport = httpx.AsyncHTTPTransport(local_address="0.0.0.0", retries=1)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:157.0) Gecko/20100101 Firefox/157.0"
+        }
+        async with httpx.AsyncClient(transport=transport, timeout=10, headers=headers) as c:
+            page = (await c.get(url)).text
+    except httpx.HTTPError:
+        return []
+    clean = lambda h: re.sub(r"<[^>]+>", "", unescape(h)).strip()  # noqa: E731
+    return [
+        {"href": unescape(h), "title": clean(t), "snippet": clean(sn)}
+        for h, t, sn in RESULT_RE.findall(page)
+    ][:8]
+
+
 async def web_search(ctx: Context, query: str) -> str:
     if not ctx.desktop:
         return ("1. Interstellar Wiki: TARS: https://interstellarfilm.fandom.com/wiki/TARS\n"
                 "   TARS is a former U.S. Marine Corps tactical robot... (dry run)")  # fmt: skip
-    await _goto(f"https://html.duckduckgo.com/html/?q={quote_plus(query)}")
-    results = (
-        _json(await (await _browser()).call_tool("evaluate_script", {"function": RESULTS_JS})) or []
-    )
+    url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
+    results = await _search_http(url)  # no browser needed for DuckDuckGo's plain page
+    if not results:
+        await _goto(url)
+        results = (
+            _json(await (await _browser()).call_tool("evaluate_script", {"function": RESULTS_JS}))
+            or []
+        )
     lines = []
     for i, r in enumerate(results, 1):
         url = _real_url(r.get("href", ""))
@@ -129,6 +160,88 @@ async def read_page(ctx: Context, url: str) -> str:
     return f"{url}\n{text.strip()[:6000] or '(no readable text)'}"
 
 
+def _best_passages(text: str, question: str, keep: int = 3, limit: int = 700) -> str:
+    """The paragraphs of a page that share the most words with the question."""
+    want = {w for w in re.findall(r"\w+", question.lower()) if len(w) > 3}
+    paras = [p.strip() for p in re.split(r"\n\s*\n|\n(?=[A-Z])", text) if len(p.strip()) > 60]
+    scored = sorted(paras, key=lambda p: -len(want & set(re.findall(r"\w+", p.lower()))))
+    out, size = [], 0
+    for para in scored[:keep]:
+        out.append(para[:limit])
+        size += len(out[-1])
+    return "\n".join(out)
+
+
+class _Text(HTMLParser):
+    """Visible text of an HTML page (scripts, styles, navigation dropped)."""
+
+    SKIP = {"script", "style", "noscript", "nav", "header", "footer", "svg", "form"}
+
+    def __init__(self):
+        super().__init__()
+        self.out: list[str] = []
+        self.depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.SKIP:
+            self.depth += 1
+        elif tag in ("p", "br", "li", "h1", "h2", "h3", "h4", "tr", "div"):
+            self.out.append("\n")
+
+    def handle_endtag(self, tag):
+        if tag in self.SKIP and self.depth:
+            self.depth -= 1
+
+    def handle_data(self, data):
+        if not self.depth:
+            self.out.append(data)
+
+
+async def _fetch_text(url: str) -> str:
+    """A page's text over plain HTTP (no browser): fast, fine for most articles.
+    IPv4 only: IPv6 is broken on some networks here."""
+    transport = httpx.AsyncHTTPTransport(local_address="0.0.0.0", retries=1)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:157.0) Gecko/20100101 Firefox/157.0"
+    }
+    async with httpx.AsyncClient(
+        transport=transport, timeout=10, follow_redirects=True, headers=headers
+    ) as c:
+        r = await c.get(url)
+    if r.status_code >= 400 or "html" not in r.headers.get("content-type", ""):
+        return ""
+    parser = _Text()
+    parser.feed(r.text[:2_000_000])
+    return re.sub(r"\n\s*\n\s*", "\n\n", "".join(parser.out)).strip()
+
+
+async def deep_research(ctx: Context, question: str, sources: int = 3) -> str:
+    if not ctx.desktop:
+        return f"[1] Example source: https://example.com\n(passages about {question!r}, dry run)\nCite sources as [1], [2]."
+    found = await web_search(ctx, question)
+    links = re.findall(r"^\d+\. (.*?): (https?://\S+)", found, re.M)[: max(1, min(sources, 5))]
+    if not links:
+        return found
+
+    async def one(i: int, title: str, url: str) -> str:
+        if not ctx.sites.check(url, "read").allowed:
+            return ""
+        try:
+            text = await _fetch_text(url)
+            if len(text) < 500:  # built by scripts: read it in the hidden browser
+                text = (await read_page(ctx, url)).split("\n", 1)[-1]
+        except Exception as e:  # a page that won't load shouldn't sink the rest
+            return f"[{i}] {title}: {url}\n(couldn't read it: {type(e).__name__})"
+        return f"[{i}] {title}: {url}\n{_best_passages(text, question)}"
+
+    notes = [
+        n for n in await asyncio.gather(*(one(i, t, u) for i, (t, u) in enumerate(links, 1))) if n
+    ]
+    return (
+        "\n\n".join(notes) + "\n\nAnswer from these, citing them as [1], [2]; say if they disagree."
+    )
+
+
 def register(reg: Registry):
     reg.tool(
         "web_search",
@@ -137,6 +250,13 @@ def register(reg: Registry):
         obj(["query"], query={"type": "string"}),
         speak="Searching",
     )(web_search)
+    reg.tool(
+        "deep_research",
+        "Research a question properly: search, read the top few pages, and return the relevant "
+        "passages with numbered sources to cite. For questions needing several sources.",
+        obj(["question"], question={"type": "string"}, sources={"type": "integer", "description": "pages to read, 1-5"}),
+        speak="Researching",
+    )(deep_research)  # fmt: skip
     reg.tool(
         "read_page",
         "Read a web page's text in the hidden browser (e.g. a web_search result).",

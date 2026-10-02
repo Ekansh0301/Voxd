@@ -39,6 +39,13 @@ CONTROL_TOOLS = {"type_text", "press_keys", "focus_window", "click", "click_sequ
 TAP_SECONDS = 0.45  # shorter than this, a press is a stop, not speech
 
 
+def _plain(text: str) -> str:
+    """What's spoken and shown: no markdown emphasis, bullets, backticks or em dashes."""
+    text = re.sub(r"\*\*|__|`", "", text)
+    text = re.sub(r"(?m)^\s*(?:[-*•]|\d+\.)\s+", "", text)
+    return text.replace(" — ", ", ").replace("—", ", ")
+
+
 def _step_label(name: str, args: dict) -> str:
     """'web_search', {'query': 'population of delhi'} -> 'web search: population of delhi'."""
     arg = next((str(v) for v in args.values() if isinstance(v, str) and v.strip()), "")
@@ -179,7 +186,7 @@ class VoiceService:
     def subtitle(self, who: str, text: str):
         """Captions for the avatar window: what was heard/typed, and TARS's words as
         each spoken chunk starts, so the text follows the voice."""
-        text = text.replace(" — ", ", ").replace("—", ", ").replace("`", "")  # plain text
+        text = _plain(text)  # plain text
         self.on_event({"type": "subtitle", "who": who, "text": text})
 
     async def _say(self, text: str, state: str = SPEAKING):
@@ -397,7 +404,7 @@ class VoiceService:
 
         async def speak():
             while (chunk := await chunks.get()) is not None:
-                samples = await asyncio.to_thread(self.tts.synth, chunk.replace("`", ""))
+                samples = await asyncio.to_thread(self.tts.synth, _plain(chunk))
                 if "audio" not in marks:
                     marks["audio"] = time.monotonic()
                 said.append(chunk)
