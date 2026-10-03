@@ -27,6 +27,14 @@ start-up is slower while the prompt cache is primed (~11 s, done in the backgrou
 **"Firefox is open normally."** TARS can only drive Firefox started as
 *Firefox (TARS)*. Close Firefox and ask again; TARS starts it.
 
+**Normal Firefox behaves oddly** (it doesn't offer to save passwords, popups aren't
+blocked, the bookmarks bar is gone, add-ons don't update, sync fails). With remote
+control on, Firefox switches on its test settings and undoes them only on a clean
+quit; if it was killed, they stayed in your profile. Close Firefox and run
+`python3 scripts/firefox_prefs_fix.py`. It removes them, keeps a backup of `prefs.js`,
+and sets `remote.prefs.recommended = false` so they're never applied again. The
+Firefox (TARS) launcher runs it on every start.
+
 **Every browser action fails with "Server terminated early with status 0".**
 The driver's geckodriver was a truncated download in `/tmp` (wiped at reboot).
 TARS now uses the geckodriver inside the Firefox snap via

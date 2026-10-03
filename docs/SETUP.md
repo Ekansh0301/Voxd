@@ -85,7 +85,9 @@ Revoke: delete that file.
 Start Firefox from the **Firefox (TARS)** entry (TARS also starts it itself when it
 needs to). It's your normal profile with remote control switched on for
 localhost only; the address bar shows stripes while it is. If ordinary Firefox is
-already open, TARS asks you to close it first.
+already open, TARS asks you to close it first. The launcher sets
+`remote.prefs.recommended = false` in your profile, so remote control doesn't switch
+on Firefox's test settings (password saving off, popup blocker off...).
 
 ## 8. VS Code (optional)
 

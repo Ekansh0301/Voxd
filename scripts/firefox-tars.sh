@@ -8,4 +8,9 @@ if pgrep -x firefox >/dev/null && ! pgrep -af "firefox.*--marionette" >/dev/null
     echo "Firefox is already running without remote control; close it first." >&2
     exit 1
 fi
+# Remote control would otherwise switch on Firefox's test settings (password saving and
+# popup blocker off...), which stay in your profile if Firefox is ever killed.
+if ! pgrep -x firefox >/dev/null; then
+    python3 "$(dirname "$(readlink -f "$0")")/firefox_prefs_fix.py" >/dev/null
+fi
 exec firefox --marionette --remote-debugging-port 9222 "$@"
