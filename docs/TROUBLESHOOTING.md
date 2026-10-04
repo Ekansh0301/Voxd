@@ -54,10 +54,14 @@ Check: `gnome-extensions info tars-windows@tars.local` should say `ACTIVE`.
 **"TARS has no screenshot permission."** Grant it once (the `busctl` command in
 [SETUP.md](SETUP.md)). GNOME 50 can't show the prompt to TARS because it has no window.
 
-**Flameshot flashes and makes a shutter sound.** A screenshot permission was stored
-for all non-Flatpak apps (app id `""`), which affects Flameshot too. TARS now uses its
-own app id; remove the shared one with
-`busctl … DeletePermission sss screenshot screenshot ""`.
+**Flameshot asks "Allow screenshot?" every time, or flashes before opening.** Not
+TARS: since GNOME 50, apps outside Flatpak need a screenshot permission, and with one
+GNOME captures (flash and click) and hands the image to Flameshot. Allowing it in the
+dialog stores it for *every* non-Flatpak app (app id `""`). To allow Flameshot alone,
+store it for `org.flameshot.Flameshot` (the SETUP.md command with that app id), and
+make the Print shortcut start Flameshot under that id:
+`sh -c 'exec systemd-run --user --scope --quiet --unit=app-gnome-org.flameshot.Flameshot-$$ flameshot gui'`.
+Remove a shared grant with `busctl … DeletePermission sss screenshot screenshot ""`.
 
 **An app's buttons can't be read.** Electron apps (Termius, Super Productivity) need
 `--force-renderer-accessibility`; `config/apps.yaml` launches them with it. Flutter
