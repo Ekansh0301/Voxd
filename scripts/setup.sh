@@ -55,10 +55,14 @@ if [[ ! -d "$OPT/llama.cpp/.git" ]]; then
 fi
 # GTX 16xx is Turing *without* tensor cores. The default sm_75 build takes the
 # tensor-core path and prefills ~3x slower (152 vs 483 tok/s on Qwen3.5-4B).
-# llama.cpp recommends forcing the Pascal/MMQ kernels for these cards.
+# llama.cpp recommends forcing the Pascal/MMQ kernels for these cards. CUDA 13 can no
+# longer build for Pascal, so this needs a CUDA 12 nvcc; at run time the CUDA 12
+# libraries come from .venv (below), so the system may have any CUDA afterwards.
 BUILD="$OPT/llama.cpp/build-mmq"
 if [[ ! -x "$BUILD/bin/llama-server" ]]; then
-    export CUDACXX=/usr/local/cuda/bin/nvcc
+    CUDACXX=$(ls -d /usr/local/cuda-12*/bin/nvcc 2>/dev/null | sort -V | tail -1 || true)
+    [[ -n "$CUDACXX" ]] || { echo "llama.cpp needs the CUDA 12 toolkit (nvcc) to build" >&2; exit 1; }
+    export CUDACXX
     cmake -S "$OPT/llama.cpp" -B "$BUILD" \
         -DGGML_CUDA=ON "-DCMAKE_CUDA_ARCHITECTURES=61-virtual;80-virtual" -DGGML_CUDA_FORCE_MMQ=ON \
         -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF
@@ -117,8 +121,10 @@ if [[ ! -x "$PROJECT_DIR/.venv/bin/python" ]]; then
     python3.11 -m venv "$PROJECT_DIR/.venv"
 fi
 "$PROJECT_DIR/.venv/bin/pip" install --quiet --timeout 30 -e "$PROJECT_DIR[bench,dev]"
-# cuDNN 9 for GPU Whisper; --no-deps skips a duplicate cuBLAS (the CUDA toolkit has it)
-"$PROJECT_DIR/.venv/bin/pip" install --quiet --timeout 30 --no-deps "nvidia-cudnn-cu12>=9,<10"
+# CUDA 12 runtime, cuBLAS 12 and cuDNN 9 for llama.cpp and GPU Whisper (tars/cuda.py),
+# independent of the system's CUDA toolkit
+"$PROJECT_DIR/.venv/bin/pip" install --quiet --timeout 60 --no-deps "nvidia-cudnn-cu12>=9,<10" \
+    "nvidia-cuda-runtime-cu12==12.8.90" "nvidia-cublas-cu12==12.8.4.1"
 
 # ── Live2D avatar ─────────────────────────────────────────────────────────────
 # Live2D files need their licence accepted in a browser, so download these into

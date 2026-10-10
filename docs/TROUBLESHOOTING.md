@@ -22,6 +22,14 @@ falls back to the CPU for the rest of the session (slower, still works).
 and not overheating (`get_system_info` reports temperatures). The first answer after
 start-up is slower while the prompt cache is primed (~11 s, done in the background).
 
+**"CUDA 12 libraries missing", or the model server won't start** (llama-swap.log:
+`libcudart.so.12: cannot open shared object file`). TARS's llama.cpp build and Whisper
+need CUDA 12's runtime, cuBLAS and cuDNN, and take them from NVIDIA's wheels in
+`.venv`, not the system (which may have CUDA 13). Reinstall them with the command
+TARS prints, then `bash scripts/gen_llama_swap.sh` if `~/.config/tars/llama-swap.yaml`
+predates 2026-10-10. After an NVIDIA driver update the first answer is slow once
+(~1 min) while the GPU code is recompiled and cached.
+
 ## Firefox
 
 **"Firefox is open normally."** TARS can only drive Firefox started as

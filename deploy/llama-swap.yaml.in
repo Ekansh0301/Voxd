@@ -27,6 +27,7 @@ models:
       --jinja --no-webui --metrics --cache-reuse 256
     env:
       - "CUDA_CACHE_MAXSIZE=4294967296"
+      - "LD_LIBRARY_PATH=@CUDA_LIBS@"
     ttl: 0
 
   scout:
@@ -35,6 +36,8 @@ models:
       -m ${models}/Qwen3.5-0.8B-Q4_K_M.gguf
       --device none -ngl 0 -t 6 -c 8192 -np 1
       --jinja --no-webui
+    env:
+      - "LD_LIBRARY_PATH=@CUDA_LIBS@"
     ttl: 0
 
 groups:

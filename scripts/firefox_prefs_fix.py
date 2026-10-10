@@ -63,6 +63,11 @@ def profiles() -> list[Path]:
 def fix(profile: Path, rec: dict, check: bool) -> None:
     prefs_js = profile / "prefs.js"
     lines = prefs_js.read_text().splitlines()
+    if OPT_OUT in lines:
+        # Remote control can't set them any more, so any matching value now is one
+        # Firefox or you set in normal use (e.g. the download panel having been shown).
+        print(f"{profile.name}: ok (remote.prefs.recommended is off)")
+        return
     keep, stuck = [], []
     for line in lines:
         m = USER_PREF.match(line)
@@ -75,16 +80,14 @@ def fix(profile: Path, rec: dict, check: bool) -> None:
                 stuck.append(m.group(1))
                 continue
         keep.append(line)
-    opted_out = OPT_OUT in lines
-    print(f"{profile.name}: {len(stuck)} automation settings stuck"
-          + ("" if opted_out else "; remote.prefs.recommended not yet off"))  # fmt: skip
-    if check or (not stuck and opted_out):
+    print(
+        f"{profile.name}: {len(stuck)} automation settings stuck; remote.prefs.recommended not yet off"
+    )
+    if check:
         return
     backup = profile / f"prefs.js.before-tars-fix-{time.strftime('%Y%m%d-%H%M%S')}"
     backup.write_text(prefs_js.read_text())
-    if not opted_out:
-        keep.append(OPT_OUT)
-    prefs_js.write_text("\n".join(keep) + "\n")
+    prefs_js.write_text("\n".join(keep + [OPT_OUT]) + "\n")
     print(f"  fixed; the old file is kept as {backup.name}")
 
 

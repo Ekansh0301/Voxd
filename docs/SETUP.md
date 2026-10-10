@@ -5,7 +5,8 @@ an app read keys, take screenshots, type, or move other windows without asking.
 Each step below says what it gives TARS and how to undo it.
 
 **Needs:** Ubuntu 26.04 (GNOME 50, Wayland), an NVIDIA GPU with 4 GB or more,
-its driver and the CUDA toolkit (`nvcc`), Python 3.11, cmake, git, and about
+its driver, the CUDA 12 toolkit (`nvcc`, only to build llama.cpp; TARS brings its own
+CUDA 12 libraries, so the system can move to CUDA 13 later), Python 3.11, cmake, git, and about
 15 GB of disk. Models and binaries go to `~/.local/share/tars/`, never into the repo.
 
 ## 1. Models, llama.cpp and the Python environment
@@ -101,6 +102,9 @@ open. Remove: `code --uninstall-extension tars.tars-bridge`.
 
 ## 9. App-specific bits
 
+- **Accessibility:** `gsettings set org.gnome.desktop.interface toolkit-accessibility true`
+  so Firefox, Electron and Qt apps expose their buttons and text to TARS (GTK apps
+  always do). Undo: the same with `false`.
 - **Super Productivity:** Settings → Misc → *Enable local REST API* (for reminders
   and "what's my next task").
 - **Spotube:** nothing needed. Spotube Connect is optional (faster for songs in your
