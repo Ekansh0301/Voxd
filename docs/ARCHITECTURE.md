@@ -57,11 +57,18 @@ and benchmarked but not used yet; it's kept for background checks (Phase 6).
 6. Its words are spoken as they stream in, and shown as subtitles; each step shows
    in the window's task list.
 
-**Speed comes from the prompt cache.** The system prompt and tool list (~4,200
-tokens) take ~10 s to process cold, so they're kept byte-identical between turns
+**Speed comes from the prompt cache.** The system prompt and tool list (~6,100
+tokens) take ~15 s to process cold, so they're kept byte-identical between turns
 and primed at start-up; then a turn only processes the new words (first token
 in ~0.35 s). Anything that varies (time, facts) goes in the user message, and
-history keeps only short notes of what was done, not tool output.
+history keeps only short notes of what was done (on the user's side, so the model
+doesn't learn to write them instead of acting), not tool output.
+
+**Room in the context.** The brain has 10,240 tokens; that prefix leaves ~3,700 for
+the history, this turn's tool results and the answer. Each turn works out its budget
+from the prefix's actual size, shortens older tool results, then drops the oldest
+history turns, and cuts the newest result only as a last resort. If the server still
+refuses, it retries once with no history. Every new tool shrinks this room.
 
 ## How TARS sees the screen
 

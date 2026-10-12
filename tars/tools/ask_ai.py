@@ -58,6 +58,13 @@ async def ask_ai(ctx: Context, question: str, site: str = "") -> str:
     ctx.actions.append(f"ask ai {site or 'chatgpt'}: {safe[:60]!r}")
     if not ctx.desktop:
         return f"chatgpt says: (answer, dry run){' (personal details removed)' if mapping else ''}"
+    if not browser.connected():
+        # Otherwise open_url falls back to the user's own Firefox and each site opens
+        # there as a tab that TARS then can't read.
+        if browser._normal_firefox_running():
+            return ("error: Firefox is open normally (not as Firefox (TARS)), so TARS can't use "
+                    "it. Ask the user to close Firefox and try again; TARS then starts it itself.")  # fmt: skip
+        return "error: TARS's browser driver isn't running; the user should restart TARS"
     chosen = ctx.sites.resolve(site) if site else None
     wanted = chosen.key if chosen else ""
     order = [wanted, *[k for k in ORDER if k != wanted]] if wanted else ORDER
@@ -68,8 +75,12 @@ async def ask_ai(ctx: Context, question: str, site: str = "") -> str:
             continue
         try:
             answer = await _ask_on(ctx, key, s.url, safe)
+        except ConnectionError as e:
+            # Firefox itself isn't usable (open normally, not starting, not responding):
+            # every site would fail the same way, so say why instead of trying them all.
+            return f"error: couldn't use Firefox: {e}"
         except Exception as e:  # site down, signed out, changed layout: try the next one
-            tried.append(f"{key} ({type(e).__name__})")
+            tried.append(f"{key} ({type(e).__name__}: {str(e)[:80]})")
             continue
         if len(answer) < 2:
             tried.append(f"{key} (no answer)")

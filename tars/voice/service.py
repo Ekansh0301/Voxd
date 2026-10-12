@@ -39,8 +39,23 @@ CONTROL_TOOLS = {"type_text", "press_keys", "focus_window", "click", "click_sequ
 TAP_SECONDS = 0.45  # shorter than this, a press is a stop, not speech
 
 
+# The model sometimes copies the action notes kept in the history into its reply,
+# claiming something it never did; such text is never spoken, shown or kept.
+FAKE_NOTE = re.compile(
+    r"[ \t]*\n?[ \t]*(?:\[(?:done|actions? taken)|\(actions taken for this request)[^\n]*", re.I
+)
+
+
+def _note(steps: list[tuple[str, dict]]) -> str:
+    """What was done for a request, kept on the user's side of the history (in the
+    assistant's own replies the model learns to write it instead of doing it)."""
+    done = ", ".join(f"{tool}({_brief(args)})" for tool, args in steps)
+    return f"\n(actions taken for this request: {done[:240]})" if done else ""
+
+
 def _plain(text: str) -> str:
     """What's spoken and shown: no markdown emphasis, bullets, backticks or em dashes."""
+    text = FAKE_NOTE.sub("", text)
     text = re.sub(r"\*\*|__|`", "", text)
     text = re.sub(r"(?m)^\s*(?:[-*•]|\d+\.)\s+", "", text)
     return text.replace(" — ", ", ").replace("—", ", ")
@@ -313,11 +328,8 @@ class VoiceService:
             flush=True,
         )
         self.history += [
-            {"role": "user", "content": stamp(text)},
-            {
-                "role": "assistant",
-                "content": f"{reply}\n[done: {route.tool}({_brief(route.args)})]",
-            },
+            {"role": "user", "content": stamp(text) + _note([(route.tool, route.args)])},
+            {"role": "assistant", "content": reply},
         ]
         self._set(IDLE)
         return True
@@ -387,7 +399,7 @@ class VoiceService:
         ):
             return
 
-        # The system prompt (and the 4k-token tool list after it) must stay byte-identical
+        # The system prompt (and the ~6k-token tool list after it) must stay byte-identical
         # between turns so llama.cpp reuses its cache; anything that varies goes here.
         facts = [f for _, f in self.memory.facts(text, limit=4)]
         user_msg = stamp(text) + (f"\n(you remember: {'; '.join(facts)})" if facts else "")
@@ -404,6 +416,8 @@ class VoiceService:
 
         async def speak():
             while (chunk := await chunks.get()) is not None:
+                if not _plain(chunk).strip():
+                    continue
                 samples = await asyncio.to_thread(self.tts.synth, _plain(chunk))
                 if "audio" not in marks:
                     marks["audio"] = time.monotonic()
@@ -456,17 +470,16 @@ class VoiceService:
             print("tars: (interrupted)", flush=True)
             raise
 
-        # History keeps the spoken answer plus a compact, unspoken note of what was done,
-        # so follow-ups ("move it to Documents") know what "it" is.
-        # Compact: what was done (tool + args), not the outputs. Every history token is
-        # re-read on the next turn, and follow-ups ("move it") only need the args.
-        note = ", ".join(f"{s['tool']}({_brief(s['args'])})" for s in result.steps)
+        # History keeps the answer, plus a compact note of what was done (tool + args, not
+        # outputs) on the user's side, so follow-ups ("move it to Documents") know what
+        # "it" is. Every history token is re-read on the next turn.
+        result.answer = FAKE_NOTE.sub("", result.answer).strip()
         self.history += [
-            {"role": "user", "content": user_msg},  # exactly as sent: keeps the cache valid
             {
-                "role": "assistant",
-                "content": result.answer + (f"\n[done: {note[:240]}]" if note else ""),
+                "role": "user",
+                "content": user_msg + _note([(s["tool"], s["args"]) for s in result.steps]),
             },
+            {"role": "assistant", "content": result.answer},
         ]
         self.memory.add_turn(text, result.answer)
         print(f"tars: {result.answer}", flush=True)

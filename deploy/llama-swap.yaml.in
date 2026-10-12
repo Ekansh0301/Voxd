@@ -23,7 +23,7 @@ models:
       -m ${models}/Qwen3.5-4B-Q4_K_M.gguf
       --mmproj ${models}/qwen3.5-4b-mmproj/mmproj-F16.gguf --no-mmproj-offload
       --image-max-tokens 256
-      -c 8192 -ngl 99 -np 1 -ub 256 -fa auto -fit off
+      -c 10240 -ngl 99 -np 1 -ub 256 -fa auto -fit off
       --jinja --no-webui --metrics --cache-reuse 256
     env:
       - "CUDA_CACHE_MAXSIZE=4294967296"

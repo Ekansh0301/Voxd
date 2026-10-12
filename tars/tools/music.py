@@ -250,14 +250,15 @@ class Spotube:
         return False
 
 
-async def _wait_playing(changed_from: str, query: str = "") -> tuple[str, str]:
-    title = artist = ""
+async def _wait_playing(changed_from: str, query: str = "") -> tuple[str, str, bool]:
+    """(title, artist, playing) once the wanted song plays, or the last state seen."""
+    title, artist, playing = "", "", False
     for _ in range(12):
         await asyncio.sleep(1)
         title, artist, playing = now_playing()
         if playing and (_matches(query, title, artist) if query else title != changed_from):
             break
-    return title, artist
+    return title, artist, playing
 
 
 async def play_by_search(ctx: Context, query: str) -> str:
@@ -288,11 +289,13 @@ async def play_by_search(ctx: Context, query: str) -> str:
             before = now
             await sp.click(FIRST_ROW)
             asked = await sp.confirm_dialog(before)
-            title, artist = await _wait_playing("", query)
+            title, artist, playing = await _wait_playing("", query)
     except (NoExtension, InputError) as e:
         return f"error: {e}"
-    if not title:
-        return "error: Spotube didn't start playing; don't retry, tell the user"
+    if not title or not playing:
+        # Not "played <whatever was paused>": that once reported a song that never started.
+        return (f"error: Spotube didn't start playing {query!r} (the click on the result may "
+                "have missed). Don't retry; tell the user")  # fmt: skip
     note = " (Spotube replaced the queue)" if asked else ""
     if not _matches(query, title, artist):
         return f"played {title} by {artist}, the top result for {query!r}; it may not be the one meant. Don't retry{note}"
@@ -356,10 +359,10 @@ async def play_playlist(ctx: Context, name: str) -> str:
             await asyncio.sleep(0.6)  # its play button appears on hover
             await sp.click(TILE_PLAY)
             await sp.confirm_dialog(img)
-            title, artist = await _wait_playing(playing_before)
+            title, artist, playing = await _wait_playing(playing_before)
     except (NoExtension, InputError) as e:
         return f"error: {e}"
-    if not title or title == playing_before:
+    if not title or not playing or title == playing_before:
         return "error: the playlist didn't start; don't retry, tell the user"
     which = _current_playlist()
     return f"playing the playlist {which or name!r}: {title} by {artist}"

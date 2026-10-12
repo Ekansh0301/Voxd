@@ -31,28 +31,53 @@ class TurnResult:
     stopped: str | None = None  # why the loop ended early, if it did
 
 
-# The model has 8192 tokens; system prompt + 40-odd tool schemas take ~4250 and the answer
-# up to 400, which leaves ~3500 tokens (~11000 characters) for history and this turn.
-CONTEXT_CHARS = 11000
-KEEP_FULL = 2  # latest tool results kept whole
+# The context window (llama-swap's -c). The system prompt and ~60 tool schemas take
+# ~6100 of it, so what's left for history and this turn is worked out per turn from
+# their actual size, not assumed.
+CONTEXT_TOKENS = 10240
+CHARS_PER_TOKEN = 3.0  # code is ~3.1, prose ~4: estimate on the safe side
+PREFIX_CHARS_PER_TOKEN = 3.5  # the system prompt and the JSON tool schemas (measured ~3.6)
+KEEP_FULL = 2  # latest tool results kept whole when possible
+MIN_RESULT = 600  # a latest tool result is never cut below this
 
 
-def _fit(messages: list[dict], budget: int = CONTEXT_CHARS) -> None:
-    """Shorten older tool results, oldest first, until the conversation fits."""
+def _budget(messages: list[dict], tools: list[dict], answer_tokens: int) -> int:
+    """Characters available for everything after the system prompt."""
+    prefix = (
+        len(str(messages[0].get("content") or "")) + len(json.dumps(tools))
+    ) / PREFIX_CHARS_PER_TOKEN
+    return int((CONTEXT_TOKENS - answer_tokens - 150 - prefix) * CHARS_PER_TOKEN)
 
-    def size() -> int:
-        return sum(
-            len(str(m.get("content") or "")) + len(json.dumps(m.get("tool_calls", "")))
-            for m in messages[1:]
-        )
 
-    tools = [m for m in messages if m.get("role") == "tool"][:-KEEP_FULL]
-    for m in tools:
-        if size() <= budget:
+def _size(messages: list[dict]) -> int:
+    return sum(
+        len(str(m.get("content") or "")) + len(json.dumps(m.get("tool_calls", "")))
+        for m in messages[1:]
+    )
+
+
+def _fit(messages: list[dict], budget: int) -> None:
+    """Make the conversation fit: shorten older tool results, then drop the oldest
+    history turns, then (last resort) cut this turn's latest tool results."""
+    current = max(i for i, m in enumerate(messages) if m.get("role") == "user")
+    tools = [m for m in messages[current:] if m.get("role") == "tool"]
+    for m in tools[:-KEEP_FULL]:
+        if _size(messages) <= budget:
             return
         text = str(m.get("content") or "")
         if len(text) > 300:
             m["content"] = text[:240] + "\n… (older result shortened to save room)"
+    while _size(messages) > budget and current > 1:
+        del messages[1]  # oldest history first; this turn is never dropped
+        current -= 1
+    for m in tools[-KEEP_FULL:]:
+        over = _size(messages) - budget
+        text = str(m.get("content") or "")
+        if over <= 0:
+            return
+        keep = max(MIN_RESULT, len(text) - over - 80)
+        if keep < len(text):
+            m["content"] = text[:keep] + f"\n… ({len(text) - keep} more characters cut to fit)"
 
 
 # Tools whose output can carry someone else's text (files, pages, screens, terminals).
@@ -107,11 +132,13 @@ async def run_turn(
         {"id": f"routine{i}", "name": p["tool"], "arguments": p["args"]}
         for i, p in enumerate(plan or [])
     ]
+    budget = _budget(messages, tools, int(llm_kw.get("max_tokens", 400)))
+    retried = False
     for _ in range(MAX_STEPS):
         text: list[str] = []
         calls: list[dict] = []
         replaying = bool(pending)
-        _fit(messages)
+        _fit(messages, budget)
         if replaying:
             calls, pending = pending, []
         else:
@@ -127,6 +154,12 @@ async def run_turn(
             except httpx.HTTPStatusError as e:
                 if e.response.status_code != 400:
                     raise
+                if not retried and not text:
+                    # The estimate was off: retry once with much less (no history at all).
+                    log.warning("the model rejected the request; retrying with less context")
+                    retried, budget = True, budget // 2
+                    _fit(messages, budget)
+                    continue
                 log.warning("the model rejected the request (likely too long for its context)")
                 done = ", ".join(s["tool"] for s in steps) or "nothing yet"
                 answer = f"This task got too long for me to finish in one go. So far I did: {done}."

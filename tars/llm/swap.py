@@ -18,8 +18,8 @@ async def warm_up(endpoint: str, model: str):
 
 
 async def prime(endpoint: str, model: str, system: str, tools: list[dict]) -> float:
-    """Pre-fill llama.cpp's cache with the system prompt + tool list (~4k tokens, about
-    10 s cold), so the first real turn only processes the new words. Returns seconds."""
+    """Pre-fill llama.cpp's cache with the system prompt + tool list (~6k tokens, about
+    15 s cold), so the first real turn only processes the new words. Returns seconds."""
     from tars.llm.client import stream_turn
 
     t = time.monotonic()

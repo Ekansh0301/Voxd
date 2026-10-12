@@ -69,7 +69,7 @@ Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-1
   3.4–3.5× faster for a desktop task (target ≥ 3×), 1.3–1.5× for ChatGPT questions,
   where ChatGPT's own answer time dominates.
 - **Proposed to skip** (your call): the Conductor with specialist agents, and per-role
-  prompt caches. On this GPU there is one prompt cache, and each role's ~4k-token prompt
+  prompt caches. On this GPU there is one prompt cache, and each role's ~6k-token prompt
   takes ~10 s to load, so switching roles would cost far more than it saves; the single
   agent already passes the long-task target. Teach-by-demonstration (recording your
   clicks) is also deferred: taught-by-voice routines cover most of it, and recording

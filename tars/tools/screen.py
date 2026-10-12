@@ -5,10 +5,12 @@ from tmux. Ids are only valid until the next read_screen.
 """
 
 import asyncio
+import re
 import shutil
 import subprocess
 
 from tars.agent.tools import Context, Denied, Registry, Tier, obj
+from tars.perception import windows
 from tars.perception.atspi import Atspi, Node
 
 _last: dict[int, Node] = {}
@@ -62,14 +64,21 @@ async def _after_action(wait: float = 0.6) -> str:
     return _diff(before, text)
 
 
+def _window_matches(query: str, app: str, title: str) -> bool:
+    q = query.lower().strip()
+    squashed = re.sub(r"[\s_-]+", "", q)
+    app, title = app.lower(), title.lower()
+    return (q in app or q in title or squashed in re.sub(r"[\s_-]+", "", title)
+            or windows.WINDOW_ALIASES.get(squashed, "\0") == app)  # fmt: skip
+
+
 async def read_screen(ctx: Context, window: str = "") -> str:
     async with Atspi() as a:
         wins = await a.windows()
         if not wins:
             return "error: no accessible windows found"
         if window:
-            q = window.lower()
-            match = [(app, w) for app, w in wins if q in app.lower() or q in w.name.lower()]
+            match = [(app, w) for app, w in wins if _window_matches(window, app, w.name)]
             if not match:
                 return f"no window matching {window!r}; open windows: " + ", ".join(
                     f"{app}: {w.name!r}" for app, w in wins
@@ -232,7 +241,7 @@ def register(reg: Registry):
     reg.tool("click", "Click one button/link/item shown by the last read_screen, by its name.",
              obj(["name"], name=name), tier=Tier.T1)(click)  # fmt: skip
     reg.tool("click_sequence", "Click several elements in order, by name, e.g. ['1', '2', '×', '7', '='].",
-             obj(["names"], names={"type": "array", "items": {"type": "string"}}), tier=Tier.T1)(click_sequence)  # fmt: skip
+             obj(["names"], names={"type": "array", "items": {"type": "string"}, "maxItems": 30}), tier=Tier.T1)(click_sequence)  # fmt: skip
     reg.tool("type_into", "Replace the text of a field shown by the last read_screen, by its name.",
              obj(["name", "text"], name=name, text={"type": "string"}), tier=Tier.T1)(type_into)  # fmt: skip
     reg.tool("read_terminal", "Read the latest output of the terminal (tmux).",

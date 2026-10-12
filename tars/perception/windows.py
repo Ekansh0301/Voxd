@@ -63,10 +63,17 @@ async def activate(win: Window) -> bool:
     return bool(ok)
 
 
+# What people call an app vs. what its window reports ("vs code" is app "code").
+WINDOW_ALIASES = {"vscode": "code", "visualstudiocode": "code", "terminal": "ghostty",
+                  "files": "nautilus", "calculator": "gnome-calculator"}  # fmt: skip
+
+
 def find(query: str, wins: list[Window]) -> Window | None:
     """Best window for 'spotube', 'super productivity', 'firefox outlook', ..."""
     q = query.lower().strip()
     squash = q.replace(" ", "")
+    if squash in WINDOW_ALIASES:
+        q = squash = WINDOW_ALIASES[squash]
 
     def keys(w: Window) -> str:
         return f"{w.app} {w.wm_class} {w.title}".lower()
