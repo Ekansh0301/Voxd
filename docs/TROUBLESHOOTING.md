@@ -32,8 +32,18 @@ predates 2026-10-10. After an NVIDIA driver update the first answer is slow once
 
 ## Firefox
 
-**"Firefox is open normally."** TARS can only drive Firefox started as
-*Firefox (TARS)*. Close Firefox and ask again; TARS starts it.
+**"Firefox is open normally."** TARS can only drive Firefox started with remote control
+(*Firefox (TARS)*). It offers to restart Firefox for you ("Should I restart it?"): on yes
+it quits Firefox the normal way and reopens it with your windows and tabs (Firefox's own
+one-time session restore). If Firefox asks something while quitting, TARS leaves it to you.
+
+**ChatGPT (or another site) shows "Just a moment…" / "Verify you are human".** That's the
+site's bot check, and TARS won't complete it for you. Finish it yourself in the Firefox
+window, then ask again; TARS says so instead of returning a made-up answer.
+
+**Tabs missing after TARS opened Firefox.** Firefox starts on the home page by default.
+TARS now restores your previous windows and tabs when it starts Firefox; for an older
+session use *History → Restore Previous Session* before closing Firefox again.
 
 **Normal Firefox behaves oddly** (it doesn't offer to save passwords, popups aren't
 blocked, the bookmarks bar is gone, add-ons don't update, sync fails). With remote

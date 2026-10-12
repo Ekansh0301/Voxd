@@ -13,6 +13,10 @@ remote.prefs.recommended = false so remote control never applies them again.
 Firefox must be closed (it rewrites prefs.js when it quits).
     python3 scripts/firefox_prefs_fix.py           # report and fix
     python3 scripts/firefox_prefs_fix.py --check   # report only
+    python3 scripts/firefox_prefs_fix.py --restore-session   # also: next start restores tabs
+
+--restore-session sets Firefox's own one-time "restore my windows and tabs" flag (what its
+Restart uses), for when TARS reopens Firefox after it was closed for TARS's sake.
 """
 
 import configparser
@@ -27,6 +31,7 @@ OMNI = Path("/snap/firefox/current/usr/lib/firefox/omni.ja")
 SOURCE = "chrome/remote/content/shared/RecommendedPreferences.sys.mjs"
 ROOTS = [Path.home() / "snap/firefox/common/.mozilla/firefox", Path.home() / ".mozilla/firefox"]
 OPT_OUT = 'user_pref("remote.prefs.recommended", false);'
+RESUME = "browser.sessionstore.resume_session_once"
 USER_PREF = re.compile(r'^user_pref\("([^"]+)",\s*(.*)\);$')
 
 
@@ -101,6 +106,10 @@ def main() -> None:
     rec = automation_prefs()
     for profile in profiles():
         fix(profile, rec, check)
+        if "--restore-session" in sys.argv and not check:
+            prefs_js = profile / "prefs.js"
+            lines = [ln for ln in prefs_js.read_text().splitlines() if RESUME not in ln]
+            prefs_js.write_text("\n".join([*lines, f'user_pref("{RESUME}", true);']) + "\n")
 
 
 if __name__ == "__main__":

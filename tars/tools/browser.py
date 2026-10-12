@@ -14,6 +14,7 @@ Elements are addressed by their visible name, as with the desktop screen tools.
 
 import asyncio
 import json
+import os
 import re
 import socket
 import subprocess
@@ -89,11 +90,14 @@ async def ensure_firefox(url: str = "") -> bool:
         return False
     if _normal_firefox_running():
         raise ConnectionError(
-            "Firefox is open normally, so TARS can't read or type in it. Ask the user to close "
-            "Firefox; then open_url starts Firefox (TARS) by itself."
+            "Firefox is open normally, so TARS can't read or type in it. restart_firefox fixes "
+            "that (it asks the user first and keeps their tabs)."
         )
+    # Your windows and tabs come back (Firefox's own one-time restore, as its Restart
+    # does): TARS starts Firefox when you closed it for TARS, or to restart it.
+    env = {**os.environ, "TARS_RESTORE_SESSION": "1"}
     subprocess.Popen([str(LAUNCHER), *([url] if url else [])], stdout=subprocess.DEVNULL,
-                     stderr=subprocess.DEVNULL, start_new_session=True)  # fmt: skip
+                     stderr=subprocess.DEVNULL, start_new_session=True, env=env)  # fmt: skip
     for _ in range(40):
         await asyncio.sleep(0.5)
         if _firefox_listening():
@@ -447,6 +451,40 @@ async def web_open(url: str) -> str:
     return out
 
 
+async def restart_firefox(ctx: Context) -> str:
+    """Firefox open normally (no remote control): with the user's yes, quit it the normal
+    way and start Firefox (TARS), restoring its windows and tabs."""
+    if _firefox_listening():
+        return "Firefox (TARS) is already running"
+    if not ctx.desktop:
+        return "restarted Firefox as Firefox (TARS) (dry run)"
+    if _normal_firefox_running():
+        if not ctx.approve or not await ctx.approve("Firefox is open without remote control, so I can't use it. "
+                                 "Should I restart it? Your windows and tabs will come back."):  # fmt: skip
+            return "refused: the user wants Firefox left as it is"
+        from tars.perception.keyboard import Keyboard
+        from tars.perception.windows import activate, list_windows
+
+        wins = [w for w in await list_windows() if "firefox" in (w.wm_class + w.app).lower()]
+        if not wins:
+            return "error: couldn't find Firefox's window; ask the user to close Firefox (Ctrl+Q)"
+        await activate(wins[0])
+        await asyncio.sleep(0.4)
+        async with Keyboard() as kb:
+            await kb.combo("ctrl+q")  # Firefox's own quit: saves the session
+        for _ in range(30):
+            await asyncio.sleep(0.5)
+            if not _normal_firefox_running():
+                break
+        else:
+            # Firefox is asking something (quit with N tabs? leave this page?): the user's call
+            return ("error: Firefox didn't close; it's probably asking a question (such as whether "
+                    "to leave a page). Ask the user to answer it or close Firefox, then try again")  # fmt: skip
+        await asyncio.sleep(1.0)
+    await ensure_firefox()
+    return "restarted Firefox as Firefox (TARS); its windows and tabs were restored"
+
+
 def connected() -> bool:
     """Driver running and Firefox (TARS) usable, now or after starting it."""
     server = _get_server()
@@ -475,6 +513,8 @@ def register(reg: Registry, get_server: Callable[[], MCPServer | None]):
 
     desktop.BROWSER = (connected, web_open)  # open_url uses Firefox (TARS) when it's connected
     name = {"type": "string", "description": "the element's name as web_read shows it"}
+    reg.tool("restart_firefox", "Restart Firefox with remote control so TARS can use it, when it's open "
+             "normally; asks the user first and restores their tabs.", tier=Tier.T1)(restart_firefox)  # fmt: skip
     reg.tool("web_tabs", "List the tabs open in Firefox.")(web_tabs)
     reg.tool("web_switch", "Switch to a Firefox tab by its index.", obj(["tab"], tab={"type": "integer"}),
              tier=Tier.T1)(web_switch)  # fmt: skip

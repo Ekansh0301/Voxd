@@ -106,10 +106,11 @@ async def ask_ai(ctx: Context, question: str, site: str = "") -> str:
     if not browser.connected():
         # Otherwise open_url falls back to the user's own Firefox and each site opens
         # there as a tab that TARS then can't read.
-        if browser._normal_firefox_running():
-            return ("error: Firefox is open normally (not as Firefox (TARS)), so TARS can't use "
-                    "it. Ask the user to close Firefox and try again; TARS then starts it itself.")  # fmt: skip
-        return "error: TARS's browser driver isn't running; the user should restart TARS"
+        if not browser._normal_firefox_running():
+            return "error: TARS's browser driver isn't running; the user should restart TARS"
+        out = await browser.restart_firefox(ctx)  # asks the user first
+        if not out.startswith("restarted"):
+            return f"error: Firefox is open normally, so TARS can't use it ({out})"
     chosen = ctx.sites.resolve(site) if site else None
     wanted = chosen.key if chosen else ""
     order = [wanted, *[k for k in ORDER if k != wanted]] if wanted else ORDER

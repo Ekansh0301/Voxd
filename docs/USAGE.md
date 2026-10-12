@@ -40,7 +40,7 @@ Drag the avatar with the left mouse button.
 | Super Productivity | "Remind me to submit the assignment tomorrow at 9", "What's my next task?", "Anything overdue?", "Sync my Super Productivity" |
 | Music | "Play Believer", "Play my phonk playlist", "Play my liked songs", "Pause the music", "Next song" |
 | Web | "Open YouTube", "Play lofi on YouTube", "Open my GitHub notifications", "Open the two sum problem on LeetCode", "QuickRef for git", "What tabs do I have open?" |
-| Web AIs | "Ask ChatGPT what the GATE exam is" (personal details are removed before sending; Gemini or Claude if ChatGPT fails) |
+| Web AIs | "Ask ChatGPT what the GATE exam is" (personal details are removed before sending; Gemini or Claude if ChatGPT fails). If your Firefox is open normally, TARS offers to restart it with your tabs; if a site shows "verify you are human", complete it yourself and ask again |
 | Forms | "Fill in this form" (from your profile; never submits, never passwords; tells you what it filled and what's left) |
 | Research | "Look up the latest stable Python version", "Research the differences between TCP and UDP and cite sources" (a hidden browser; your Firefox isn't touched) |
 | Your documents | "Search my documents for paging" (your notes and PDFs; "index my Downloads too" adds a folder) |

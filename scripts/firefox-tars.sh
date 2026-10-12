@@ -11,6 +11,8 @@ fi
 # Remote control would otherwise switch on Firefox's test settings (password saving and
 # popup blocker off...), which stay in your profile if Firefox is ever killed.
 if ! pgrep -x firefox >/dev/null; then
-    python3 "$(dirname "$(readlink -f "$0")")/firefox_prefs_fix.py" >/dev/null
+    # TARS_RESTORE_SESSION=1 (TARS starting Firefox for you): bring back your windows and tabs
+    python3 "$(dirname "$(readlink -f "$0")")/firefox_prefs_fix.py" \
+        ${TARS_RESTORE_SESSION:+--restore-session} >/dev/null
 fi
 exec firefox --marionette --remote-debugging-port 9222 "$@"

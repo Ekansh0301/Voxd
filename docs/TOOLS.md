@@ -1,7 +1,7 @@
 # TARS tools
 
 Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
-67 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
+68 tools. Tiers decide what happens when the model calls one (see [SAFETY.md](SAFETY.md)); a tool can also ask for approval itself for a risky case, such as replacing a file or clicking a Send button.
 
 | Tier | Meaning |
 |---|---|
@@ -135,6 +135,7 @@ Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
 
 | Tool | Tier | What it does | Parameters |
 |---|---|---|---|
+| `restart_firefox` | T1 | Restart Firefox with remote control so TARS can use it, when it's open normally; asks the user first and restores their tabs. | none |
 | `web_back` | T1 | Go back in the current tab. | none |
 | `web_click` | T1 | Click a link/button on the page by its name from web_read. | `name` |
 | `web_fill` | T1 | Fill a form field on the page by its name from web_read. | `name`, `text` |
