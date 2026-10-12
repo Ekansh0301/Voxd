@@ -87,7 +87,8 @@ def read_file(ctx: Context, path: str, start_line: int = 0, end_line: int = 0) -
         if not end_line and start_line:  # "line 34": show it with some context
             first = max(1, first - 3)
         last = min(total, int(end_line) if end_line else first + RANGE_LINES - 1)
-        shown, out = first - 1, []
+        shown = first - 1
+        out: list[str] = []
         for n in range(first, last + 1):
             row = f"{n:>4}| {lines[n - 1]}"
             if sum(len(r) + 1 for r in out) + len(row) > MAX_READ:
@@ -95,7 +96,8 @@ def read_file(ctx: Context, path: str, start_line: int = 0, end_line: int = 0) -
             out.append(row)
             shown = n
         return (f"{_rel(p, ctx)}, lines {first}-{shown} of {total}:\n" + "\n".join(out))  # fmt: skip
-    out, size, shown = [], 0, 0
+    out = []
+    size = shown = 0
     for line in lines:
         if size + len(line) + 1 > MAX_READ:
             break
