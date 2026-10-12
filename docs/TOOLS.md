@@ -29,7 +29,7 @@ Generated from the code by `scripts/gen_tools_doc.py`; don't edit by hand.
 | `list_dir` | T0 | List a folder's contents with sizes and dates. | `path`?, `show_hidden`? |
 | `make_dir` | T1 | Create a folder. | `path` |
 | `move_path` | T1 | Move or rename a file or folder (one item per call). | `source`, `destination` |
-| `read_file` | T0 | Read a text file. | `path` |
+| `read_file` | T0 | Read a text file, or numbered lines of it (start_line/end_line, e.g. 'line 34'). | `path`, `start_line`?, `end_line`? |
 | `trash_path` | T1 | Move a file or folder to the Trash (restorable; asks first). | `path` |
 | `write_file` | T1 | Create a text file (overwriting needs overwrite=true and approval). | `path`, `content`, `overwrite`? |
 

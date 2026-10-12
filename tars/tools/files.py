@@ -10,7 +10,8 @@ from tars.agent.policy import check_read, check_write, resolve
 from tars.agent.tools import Context, Denied, Registry, Tier, obj
 
 SKIP_DIRS = {".git", "node_modules", "venv", ".venv", "__pycache__", ".cache", "snap", ".local"}
-MAX_READ = 6000
+MAX_READ = 2300  # the agent loop keeps 2500 characters of any tool result
+RANGE_LINES = 40  # lines shown for a range without an end
 
 
 def _rel(p: Path, ctx: Context) -> str:
@@ -66,20 +67,46 @@ def list_dir(ctx: Context, path: str = "~", show_hidden: bool = False) -> str:
     return f"{_rel(p, ctx)} ({len(entries)} items):\n" + ("\n".join(lines) or "(empty)") + more
 
 
-def read_file(ctx: Context, path: str) -> str:
+def read_file(ctx: Context, path: str, start_line: int = 0, end_line: int = 0) -> str:
+    """Whole file (as much as fits), or numbered lines start_line..end_line."""
     p = resolve(path, ctx.home)
     check_read(p, ctx.home)
     if not p.exists():
         return missing(p, ctx)
     if not p.is_file():
         return f"error: {_rel(p, ctx)} is not a file"
-    data = p.read_bytes()[: MAX_READ * 4]
+    data = p.read_bytes()[:4_000_000]
     if b"\x00" in data[:2048]:
         return f"{_rel(p, ctx)} is a binary file ({_size(p.stat().st_size)})"
-    text = data.decode("utf-8", errors="replace")
-    cut = f"\n… (truncated, {len(text) - MAX_READ} more characters)" if len(text) > MAX_READ else ""
-    lines = text.count("\n") + (0 if text.endswith("\n") or not text else 1)
-    return text[:MAX_READ] + cut + f"\n[{lines} lines]"  # small models miscount newlines
+    lines = data.decode("utf-8", errors="replace").splitlines()
+    total = len(lines)  # stated outright: small models miscount newlines
+    if start_line or end_line:
+        first = max(1, int(start_line or 1))
+        if first > total:
+            return f"error: {_rel(p, ctx)} has only {total} lines"
+        if not end_line and start_line:  # "line 34": show it with some context
+            first = max(1, first - 3)
+        last = min(total, int(end_line) if end_line else first + RANGE_LINES - 1)
+        shown, out = first - 1, []
+        for n in range(first, last + 1):
+            row = f"{n:>4}| {lines[n - 1]}"
+            if sum(len(r) + 1 for r in out) + len(row) > MAX_READ:
+                break
+            out.append(row)
+            shown = n
+        return (f"{_rel(p, ctx)}, lines {first}-{shown} of {total}:\n" + "\n".join(out))  # fmt: skip
+    out, size, shown = [], 0, 0
+    for line in lines:
+        if size + len(line) + 1 > MAX_READ:
+            break
+        out.append(line)
+        size += len(line) + 1
+        shown += 1
+    if shown < total:
+        more = f"; showing lines 1-{shown}; read_file start_line/end_line shows a particular part"
+    else:
+        more = ""
+    return "\n".join(out) + f"\n[{total} lines{more}]"
 
 
 def find_files(ctx: Context, pattern: str, under: str = "~", limit: int = 30) -> str:
@@ -186,7 +213,8 @@ def register(reg: Registry):
     path = {"type": "string", "description": "path; relative paths start in the home folder"}
     reg.tool("list_dir", "List a folder's contents with sizes and dates.",
              obj([], path=path, show_hidden={"type": "boolean"}))(list_dir)  # fmt: skip
-    reg.tool("read_file", "Read a text file.", obj(["path"], path=path))(read_file)
+    reg.tool("read_file", "Read a text file, or numbered lines of it (start_line/end_line, e.g. 'line 34').",
+             obj(["path"], path=path, start_line={"type": "integer"}, end_line={"type": "integer"}))(read_file)  # fmt: skip
     reg.tool("find_files", "Find files by name pattern (e.g. '*.pdf', '*invoice*'), newest first.",
              obj(["pattern"], pattern={"type": "string"}, under=path), speak="Searching")(find_files)  # fmt: skip
     reg.tool("write_file", "Create a text file (overwriting needs overwrite=true and approval).",

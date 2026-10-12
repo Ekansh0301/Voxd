@@ -21,6 +21,10 @@ from tars.llm.client import stream_turn
 log = logging.getLogger("tars.agent")
 
 MAX_STEPS = 12
+MAX_READS_PER_FILE = 3
+LINES_ASKED = re.compile(r"\blines?\s+\d+", re.I)
+READ_FIRST = ("[You haven't read those lines in this message, and file contents aren't kept between "
+              "messages. Call read_file with start_line/end_line first, then answer.]")  # fmt: skip
 MAX_RESULT_CHARS = 2500
 
 
@@ -133,7 +137,7 @@ async def run_turn(
         for i, p in enumerate(plan or [])
     ]
     budget = _budget(messages, tools, int(llm_kw.get("max_tokens", 400)))
-    retried = False
+    retried = nudged = False
     for _ in range(MAX_STEPS):
         text: list[str] = []
         calls: list[dict] = []
@@ -142,13 +146,17 @@ async def run_turn(
         if replaying:
             calls, pending = pending, []
         else:
+            # "explain line 60": an answer before any read is made up (file contents aren't
+            # kept between messages), so hold its words back until we know it read something.
+            hold = not steps and not nudged and bool(LINES_ASKED.search(request))
             try:
                 async for kind, value in stream_turn(
                     endpoint, model, messages, tools=tools, **llm_kw
                 ):
                     if kind == "text":
                         text.append(value)  # type: ignore[arg-type]
-                        on_text(value)  # type: ignore[arg-type]
+                        if not hold:
+                            on_text(value)  # type: ignore[arg-type]
                     else:
                         calls = value  # type: ignore[assignment]
             except httpx.HTTPStatusError as e:
@@ -166,7 +174,17 @@ async def run_turn(
                 messages.append({"role": "assistant", "content": answer})
                 return TurnResult(answer, steps, stopped="context")
         said = "".join(text).strip()
+        if hold and not calls:
+            nudged = True
+            log.info("answered about file lines without reading them; asking it to read first")
+            messages.append({"role": "user", "content": READ_FIRST})
+            continue
+        if hold:
+            for piece in text:
+                on_text(piece)
         if not calls:
+            if nudged and messages[-1].get("content") == READ_FIRST:
+                messages.pop()
             messages.append({"role": "assistant", "content": said})
             return TurnResult(said, steps)
 
@@ -187,8 +205,15 @@ async def run_turn(
                 continue
             key = f"{c['name']}:{json.dumps(c['arguments'], sort_keys=True)}"
             seen[key] = seen.get(key, 0) + 1
+            target = (
+                f"{c['name']}:{c['arguments'].get('path', '')}" if c["name"] == "read_file" else ""
+            )
+            if target:
+                seen[target] = seen.get(target, 0) + 1
             if seen[key] > 2:  # the same call a third time: it's looping
                 result = "error: you already ran this exact call twice; answer with what you have"
+            elif target and seen[target] > MAX_READS_PER_FILE:  # paging through a whole file
+                result = "error: you've read this file enough times for one request; answer with what you have"
             else:
                 on_tool(c["name"], c["arguments"])
                 read = next((st for st in steps if st["tool"] in UNTRUSTED), None)
