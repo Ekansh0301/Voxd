@@ -105,7 +105,8 @@ docs/          documentation
 legacy/        the v1 prototype (Flash/Vox), kept for reference
 ```
 
-`.venv/` is TARS's Python environment. `venv/` belongs to the v1 prototype only.
+`.venv/` is TARS's Python environment. The v1 prototype's own environment was removed;
+`legacy/venv-freeze.txt` lists its packages if it's ever needed again.
 Models, binaries, memory and logs live in `~/.local/share/tars/`.
 
 ## License
