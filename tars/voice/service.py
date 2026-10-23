@@ -27,6 +27,7 @@ from tars.voice import commands
 from tars.voice.audio import Recorder
 from tars.voice.chunker import SpeechChunker
 from tars.voice.stt import Transcriber
+from tars.voice.text import FAKE_NOTE, _note, _plain
 from tars.voice.tts import Speaker
 
 log = logging.getLogger("tars.voice")
@@ -39,38 +40,10 @@ CONTROL_TOOLS = {"type_text", "press_keys", "focus_window", "click", "click_sequ
 TAP_SECONDS = 0.45  # shorter than this, a press is a stop, not speech
 
 
-# The model sometimes copies the action notes kept in the history into its reply,
-# claiming something it never did; such text is never spoken, shown or kept.
-FAKE_NOTE = re.compile(
-    r"[ \t]*\n?[ \t]*(?:\[(?:done|actions? taken)|\(actions taken for this request)[^\n]*", re.I
-)
-
-
-def _note(steps: list[tuple[str, dict]]) -> str:
-    """What was done for a request, kept on the user's side of the history (in the
-    assistant's own replies the model learns to write it instead of doing it)."""
-    done = ", ".join(f"{tool}({_brief(args)})" for tool, args in steps)
-    return f"\n(actions taken for this request: {done[:240]})" if done else ""
-
-
-def _plain(text: str) -> str:
-    """What's spoken and shown: no markdown emphasis, bullets, backticks or em dashes."""
-    text = FAKE_NOTE.sub("", text)
-    text = re.sub(r"\*\*|__|`", "", text)
-    text = re.sub(r"(?m)^\s*(?:[-*•]|\d+\.)\s+", "", text)
-    return text.replace(" — ", ", ").replace("—", ", ")
-
-
 def _step_label(name: str, args: dict) -> str:
     """'web_search', {'query': 'population of delhi'} -> 'web search: population of delhi'."""
     arg = next((str(v) for v in args.values() if isinstance(v, str) and v.strip()), "")
     return name.replace("_", " ") + (f": {arg[:48]}" if arg else "")
-
-
-def _brief(args: dict) -> str:
-    """Tool args for the history note, long values cut ('text': 'Dear …')."""
-    return ", ".join(f"{k}={str(v)[:120 if k in ('path', 'source', 'destination', 'url') else 40]!r}"
-                     for k, v in args.items())  # fmt: skip
 
 
 IDLE, LISTENING, THINKING, SPEAKING, CONFIRMING = (

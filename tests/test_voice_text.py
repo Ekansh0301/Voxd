@@ -1,6 +1,6 @@
 """What TARS speaks, shows and keeps in its history."""
 
-from tars.voice.service import _note, _plain
+from tars.voice.text import _note, _plain
 
 
 def test_copied_action_notes_never_spoken():
