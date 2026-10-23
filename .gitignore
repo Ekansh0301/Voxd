@@ -98,3 +98,6 @@ bench/results/tts/
 
 # agent eval results
 evals/results/
+
+# Claude Code settings for this machine (permissions)
+.claude/

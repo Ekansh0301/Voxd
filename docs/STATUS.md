@@ -1,6 +1,6 @@
 # Status
 
-Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-10-02 (night).
+Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-10-23.
 
 | Phase | | |
 |---|---|---|
@@ -11,7 +11,7 @@ Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-1
 | 4. Multi-agent, recursion, skills | ✅ routines done; helper agents proposed to skip | long tasks 6/6, routine replays 4/4 |
 | 5. Capabilities (mail, forms, cloud) | ✅ mostly done; Outlook later | web AIs, research, documents, site shortcuts, forms, patches |
 | 6. Proactive monitoring | not started | |
-| 7. Hardening and learning | ongoing | |
+| 7. Hardening and learning | ongoing | fixes from live use since 2026-10-10, below |
 
 ## Phase 0: foundation
 
@@ -93,6 +93,23 @@ Where TARS stands against the roadmap in [PLAN.md](PLAN.md) §16. Updated 2026-1
 - **Not done:** Outlook (later); a cloud model API (needs your choice of provider; web
   AIs cover it for now); AI Humanize (signed out, the site only inserted typos, so
   automating it would hurt your text); a pattern-based injection detector.
+
+## Hardening from live use (2026-10-10 to 10-23)
+
+- **Survives system changes:** CUDA 12 runtime and cuBLAS come from `.venv`, so the system
+  moving to CUDA 13 no longer breaks the model or speech; a clear message if they go missing.
+- **Context:** the prompt had grown to ~6,100 tokens, so file reads overflowed ("task got too
+  long"). Context 10,240; per-turn budget from the real prefix size; oldest history dropped
+  first; one retry with no history.
+- **Honesty:** history notes moved off the assistant's replies (it had copied "[done: …]"
+  without acting); answers about "line N" are held back until the lines are read;
+  `read_file` takes line ranges; Spotube no longer reports a song that didn't start.
+- **Firefox:** remote-control test settings no longer stick in your profile; TARS offers to
+  restart Firefox with your tabs; waits for a site's chat box; reports "verify you are
+  human" pages instead of a made-up answer.
+- **Repo:** v1 prototype removed (tag `v1-prototype`), benchmark-only models opt-in,
+  published on GitHub `main` with CI on Ubuntu 26.04.
+- Agent eval 50/51 everyday, 7/7 safety (2026-10-12).
 
 ## Waiting on you
 
