@@ -7,17 +7,18 @@ Each step below says what it gives TARS and how to undo it.
 **Needs:** Ubuntu 26.04 (GNOME 50, Wayland), an NVIDIA GPU with 4 GB or more,
 its driver, the CUDA 12 toolkit (`nvcc`, only to build llama.cpp; TARS brings its own
 CUDA 12 libraries, so the system can move to CUDA 13 later), Python 3.11, cmake, git, and about
-15 GB of disk. Models and binaries go to `~/.local/share/tars/`, never into the repo.
+9 GB of disk. Models and binaries go to `~/.local/share/tars/`, never into the repo.
 
 ## 1. Models, llama.cpp and the Python environment
 
 ```bash
 git clone https://github.com/Ekansh0301/Voxd.git tars && cd tars
-bash scripts/setup.sh           # llama.cpp (CUDA, Pascal/MMQ kernels), llama-swap, models (~12 GB), .venv
+bash scripts/setup.sh           # llama.cpp (CUDA, Pascal/MMQ kernels), llama-swap, models (~4.5 GB), .venv
 bash scripts/gen_llama_swap.sh  # writes ~/.config/tars/llama-swap.yaml
 ```
 
-`setup.sh` is safe to re-run and resumes interrupted downloads. It builds
+`setup.sh` is safe to re-run and resumes interrupted downloads. `--bench-models` also
+fetches the candidates the benchmarks compare (~6 GB; TARS doesn't use them). It builds
 llama.cpp with the MMQ kernel path, which prefills about 3× faster on GTX 16-series
 cards than the default build. TARS starts the model server (llama-swap) itself;
 you don't need to run it.

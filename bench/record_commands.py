@@ -1,7 +1,7 @@
 """
 Record your own voice commands for the STT benchmark (about 10 minutes).
 
-    venv/bin/python -m bench.record_commands
+    .venv/bin/python -m bench.record_commands
 
 For each sentence: press Enter to start, say it the way you normally would,
 press Enter to stop. Then Enter = keep, r = redo, s = skip, q = quit.
@@ -74,7 +74,7 @@ def main():
             with manifest.open("a") as f:
                 f.write(json.dumps({"file": fname, "text": text}) + "\n")
             break
-    print("\nAll done. Run: venv/bin/python -m bench.stt_bench")
+    print("\nAll done. Run: .venv/bin/python -m bench.stt_bench")
 
 
 if __name__ == "__main__":

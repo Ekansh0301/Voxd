@@ -1,4 +1,5 @@
 from tars.perception.windows import Window, find
+from tars.tools.screen import _window_matches
 
 
 def w(id, title, app, wm, focused=False):
@@ -22,3 +23,17 @@ def test_find():
     assert find("visual studio code", WINS).id == 4
     assert find("ghostty", WINS).id == 5
     assert find("calculator", WINS) is None
+
+
+def _win(title, app, wm_class, focused=False):
+    return Window(id=1, title=title, app=app, wm_class=wm_class, pid=1, focused=focused,
+                  minimized=False, x=0, y=0, width=1, height=1, workspace=0)  # fmt: skip
+
+
+def test_vs_code_found_by_its_everyday_name():
+    code = _win("README.md - foresight - Visual Studio Code", "Visual Studio Code", "code")
+    other = _win("LeetCode - Mozilla Firefox", "Firefox", "firefox_firefox", focused=True)
+    for name in ("vs code", "VS Code", "vscode", "visual studio code"):
+        assert find(name, [other, code]) is code
+        assert _window_matches(name, "code", code.title)
+    assert not _window_matches("vs code", "firefox", other.title)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wait until the charger is connected, then rerun the power-sensitive benchmarks
+# bench/on_ac.sh: wait until the charger is connected, then rerun the power-sensitive benchmarks
 # (resident Brain+Scout, CPU-only Scout, TTS) and regenerate docs/BENCHMARKS.md.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."

@@ -33,6 +33,9 @@ still catches). Tasks that fail repeatedly point to a real bug.
 
 ## Benchmarks
 
+The model comparisons need the candidates: `bash scripts/setup.sh --bench-models`.
+`bench/on_ac.sh` waits for the charger, then reruns the power-sensitive benchmarks.
+
 ```bash
 .venv/bin/python -m bench.llm_bench          # models: VRAM, speed, tool-choice accuracy
 .venv/bin/python -m bench.record_commands    # record your own voice set, then:

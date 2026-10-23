@@ -3,8 +3,8 @@ LLM benchmark for the GTX 1650: load time, VRAM, prefill/decode speed,
 prefix-cache reuse, tool-call accuracy (native tools vs JSON-schema mode),
 and screen-reading with the vision projector.
 
-    venv/bin/python -m bench.llm_bench                      # all models, all tests
-    venv/bin/python -m bench.llm_bench -m qwen3.5-4b-q4km -t speed,tools
+    .venv/bin/python -m bench.llm_bench                      # all models, all tests
+    .venv/bin/python -m bench.llm_bench -m qwen3.5-4b-q4km -t speed,tools
 
 Results go to bench/results/llm-<model>.json; bench/report.py turns them into
 docs/BENCHMARKS.md.

@@ -65,12 +65,6 @@ dmypy.json
 *.onnx
 *.onnx.json
 *.gguf
-# v1 prototype runtime files
-legacy/piper_bin/
-legacy/data/
-legacy/config/config.json
-legacy/config/model.txt
-legacy/config/voice.txt
 
 # Logs
 *.log
@@ -101,7 +95,6 @@ bench/data/voice/
 bench/results/*.wav
 bench/results/*.log
 bench/results/tts/
-legacy/data/memory.bak-*/
 
 # agent eval results
 evals/results/

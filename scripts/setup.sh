@@ -6,9 +6,13 @@
 # what is done and resumes partial downloads.
 #
 # Everything lives outside the repo under $TARS_HOME (default ~/.local/share/tars).
+# --bench-models also downloads the candidates the benchmarks compare (~6 GB more:
+# other LLMs, Whisper medium/distil, extra voices); TARS itself doesn't use them.
 # Downloads are forced over IPv4 because IPv6 is broken on this network
 # (connections over v6 time out instead of failing fast).
 set -euo pipefail
+BENCH_MODELS=0
+[[ "${1:-}" == "--bench-models" ]] && BENCH_MODELS=1
 
 TARS_HOME="${TARS_HOME:-$HOME/.local/share/tars}"
 OPT="$TARS_HOME/opt"
@@ -83,40 +87,42 @@ if [[ ! -x "$BIN/llama-swap" ]]; then
 fi
 "$BIN/llama-swap" --version 2>&1 | head -1 || true
 
-# ── LLM candidates ───────────────────────────────────────────────────────────
+# ── Models TARS uses ─────────────────────────────────────────────────────────
 step "GGUF models"
 hf_file unsloth/Qwen3.5-0.8B-GGUF Qwen3.5-0.8B-Q4_K_M.gguf "$MODELS/llm"
 hf_file unsloth/Qwen3.5-4B-GGUF Qwen3.5-4B-Q4_K_M.gguf "$MODELS/llm"
 mkdir -p "$MODELS/llm/qwen3.5-4b-mmproj"
 hf_file unsloth/Qwen3.5-4B-GGUF mmproj-F16.gguf "$MODELS/llm/qwen3.5-4b-mmproj"
-hf_file unsloth/Qwen3-4B-Instruct-2507-GGUF Qwen3-4B-Instruct-2507-Q4_K_M.gguf "$MODELS/llm"
-hf_file unsloth/Qwen3.5-2B-GGUF Qwen3.5-2B-Q4_K_M.gguf "$MODELS/llm"
-hf_file unsloth/Qwen3.5-4B-GGUF Qwen3.5-4B-IQ4_XS.gguf "$MODELS/llm"
 
-# ── STT candidates (CTranslate2 format for faster-whisper) ──────────────────
-step "faster-whisper models"
+step "faster-whisper model"
 hf_repo Systran/faster-whisper-small.en "$MODELS/stt/small.en"
-hf_repo Systran/faster-distil-whisper-small.en "$MODELS/stt/distil-small.en"
-hf_repo Systran/faster-whisper-medium.en "$MODELS/stt/medium.en"
 
-# ── Piper voices ─────────────────────────────────────────────────────────────
-step "Piper voices"
-for v in en_US/ryan/high en_US/lessac/high en_US/lessac/medium; do
-    name="${v%%/*}-$(echo "$v" | cut -d/ -f2)-${v##*/}"
+step "Kokoro TTS and the Piper fallback voice"
+fetch "https://github.com/thewh1teagle/kokoro-onnx/releases/download/$KOKORO_TAG/kokoro-v1.0.onnx" "$MODELS/tts/kokoro-v1.0.onnx"
+fetch "https://github.com/thewh1teagle/kokoro-onnx/releases/download/$KOKORO_TAG/voices-v1.0.bin" "$MODELS/tts/voices-v1.0.bin"
+piper_voice() {
+    local v="$1" name="${1%%/*}-$(echo "$1" | cut -d/ -f2)-${1##*/}"
     for ext in onnx onnx.json; do
         hf_file rhasspy/piper-voices "en/$v/$name.$ext" "$MODELS/tts/piper"
     done
-done
+}
+piper_voice en_US/lessac/medium
 
-# ── Kokoro TTS ───────────────────────────────────────────────────────────────
-step "Kokoro TTS"
-fetch "https://github.com/thewh1teagle/kokoro-onnx/releases/download/$KOKORO_TAG/kokoro-v1.0.int8.onnx" "$MODELS/tts/kokoro-v1.0.int8.onnx"
-fetch "https://github.com/thewh1teagle/kokoro-onnx/releases/download/$KOKORO_TAG/kokoro-v1.0.onnx" "$MODELS/tts/kokoro-v1.0.onnx"
-fetch "https://github.com/thewh1teagle/kokoro-onnx/releases/download/$KOKORO_TAG/voices-v1.0.bin" "$MODELS/tts/voices-v1.0.bin"
+# ── Benchmark candidates (--bench-models) ────────────────────────────────────
+if (( BENCH_MODELS )); then
+    step "benchmark candidates"
+    hf_file unsloth/Qwen3-4B-Instruct-2507-GGUF Qwen3-4B-Instruct-2507-Q4_K_M.gguf "$MODELS/llm"
+    hf_file unsloth/Qwen3.5-2B-GGUF Qwen3.5-2B-Q4_K_M.gguf "$MODELS/llm"
+    hf_file unsloth/Qwen3.5-4B-GGUF Qwen3.5-4B-IQ4_XS.gguf "$MODELS/llm"
+    hf_repo Systran/faster-distil-whisper-small.en "$MODELS/stt/distil-small.en"
+    hf_repo Systran/faster-whisper-medium.en "$MODELS/stt/medium.en"
+    fetch "https://github.com/thewh1teagle/kokoro-onnx/releases/download/$KOKORO_TAG/kokoro-v1.0.int8.onnx" "$MODELS/tts/kokoro-v1.0.int8.onnx"
+    piper_voice en_US/ryan/high
+    piper_voice en_US/lessac/high
+fi
 
-# ── TARS v2 Python env (.venv) ──────────────────────────────────────────────
-# Separate from v1's venv/: v2 needs numpy 2 (kokoro-onnx), v1's chromadb pins 1.x.
-step "TARS v2 Python environment (.venv)"
+# ── TARS Python env (.venv) ─────────────────────────────────────────────────
+step "TARS Python environment (.venv)"
 if [[ ! -x "$PROJECT_DIR/.venv/bin/python" ]]; then
     python3.11 -m venv "$PROJECT_DIR/.venv"
 fi

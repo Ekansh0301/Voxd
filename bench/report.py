@@ -1,6 +1,6 @@
 """Render docs/BENCHMARKS.md from bench/results/*.json.
 
-venv/bin/python -m bench.report
+.venv/bin/python -m bench.report
 """
 
 import json

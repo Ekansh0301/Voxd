@@ -43,7 +43,7 @@ monitoring. See the [roadmap](docs/PLAN.md#16-roadmap).
 
 ```bash
 git clone https://github.com/Ekansh0301/Voxd.git tars && cd tars
-bash scripts/setup.sh                    # llama.cpp, models (~12 GB), Python env
+bash scripts/setup.sh                    # llama.cpp, models (~4.5 GB), Python env
 bash scripts/gen_llama_swap.sh
 bash scripts/install_launcher.sh         # the `tars` command and app icon
 sudo bash scripts/install_pttd.sh        # Right Ctrl push-to-talk
@@ -94,7 +94,8 @@ tars/          the assistant
   perception/  accessibility (AT-SPI), screenshots, keyboard/mouse, windows, VS Code
   voice/       push-to-talk, speech recognition and synthesis, the turn loop
   ui/          avatar window (subtitles, text box, top-bar icon, control border), Live2D build
-  llm/ mcp/ memory/
+  skills/      learned and taught routines
+  llm/ mcp/ memory/  model server, MCP clients, long-term memory
 config/        tars.yaml (voice, models, personality), sites.yaml, apps.yaml, mcp.json
 deploy/        GNOME Shell extension, VS Code extension, pttd systemd units, templates
 scripts/       setup and install scripts, the `tars` launcher, Firefox (TARS) launcher
@@ -102,11 +103,10 @@ evals/         agent, screen and live desktop evals
 tests/         unit tests
 bench/         model, speech and voice benchmarks (results in docs/BENCHMARKS.md)
 docs/          documentation
-legacy/        the v1 prototype (Flash/Vox), kept for reference
 ```
 
-`.venv/` is TARS's Python environment. The v1 prototype's own environment was removed;
-`legacy/venv-freeze.txt` lists its packages if it's ever needed again.
+`.venv/` is TARS's Python environment. The v1 prototype (Flash/Vox) was removed; it's in git
+history at the tag `v1-prototype` (`git checkout v1-prototype -- legacy/` brings it back).
 Models, binaries, memory and logs live in `~/.local/share/tars/`.
 
 ## License

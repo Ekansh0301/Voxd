@@ -5,8 +5,8 @@ Measures word error rate, recall of names/places/tech words (what matters for
 commands), and latency, for each faster-whisper candidate on CPU (and one GPU
 reference run).
 
-    venv/bin/python -m bench.stt_bench
-    venv/bin/python -m bench.stt_bench -v small.en-cpu,medium.en-cpu+hot
+    .venv/bin/python -m bench.stt_bench
+    .venv/bin/python -m bench.stt_bench -v small.en-cpu,medium.en-cpu+hot
 """
 
 import argparse
@@ -70,7 +70,7 @@ def normalize(s: str) -> str:
 def load_set() -> list[dict]:
     manifest = VOICE / "manifest.jsonl"
     if not manifest.exists():
-        raise SystemExit("No recordings yet. Run: venv/bin/python -m bench.record_commands")
+        raise SystemExit("No recordings yet. Run: .venv/bin/python -m bench.record_commands")
     return [json.loads(line) for line in manifest.read_text().splitlines() if line]
 
 
